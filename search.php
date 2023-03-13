@@ -1,5 +1,5 @@
 <?php
-/* This file is part of Web Search Engine application developed by Mihai MOGA.
+/* This file is part of Web Search Engine application developed by Stefan-Mihai MOGA.
 
 Web Search Engine is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Open
