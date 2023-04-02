@@ -27,26 +27,26 @@ Web Search Engine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>
 void DisplayLastError(LPCTSTR lpszOperation)
 {
 	//Display a message and the last error in the TRACE. 
-	LPVOID lpMsgBuf = NULL;
+	LPVOID lpMsgBuf = nullptr;
 	CString	strLastError = _T("[CryptoAPI] ");
 
 	FormatMessage(
 		FORMAT_MESSAGE_ALLOCATE_BUFFER |
 		FORMAT_MESSAGE_FROM_SYSTEM |
 		FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL,
+		nullptr,
 		GetLastError(),
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPTSTR)&lpMsgBuf,
 		0,
-		NULL);
+		nullptr);
 	strLastError += lpszOperation;
 	strLastError += (LPCTSTR)lpMsgBuf;
 	//Trim CR/LF from the error message.
 	strLastError.TrimRight();
 
 	//Display the last error.
-	TRACE(_T("%s\n"), strLastError);
+	TRACE(_T("%s\n"), static_cast<LPCWSTR>(strLastError));
 	AfxMessageBox(strLastError, MB_OK | MB_ICONERROR);
 
 	// free alocated buffer by FormatMessage

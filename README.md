@@ -1,3 +1,5 @@
+![WebSearchEngine.png](WebSearchEngine.png)
+
 A [search engine](https://www.text-mining.ro/) is a software system that is designed to carry out web searches. They search the World Wide Web in a systematic way for particular information specified in a textual web search query. The search results are generally presented in a line of results, often referred to as search engine results pages (SERPs) The information may be a mix of links to web pages, images, videos, infographics, articles, research papers, and other types of files. Some search engines also mine data available in databases or open directories. Unlike web directories, which are maintained only by human editors, search engines also maintain real-time information by running an algorithm on a web crawler. Internet content that is not capable of being searched by a web search engine is generally described as the deep web.
 
 A search engine maintains the following processes in near real time:
@@ -18,3 +20,10 @@ Beyond simple keyword lookups, search engines offer their own GUI- or command-dr
 The usefulness of a search engine depends on the relevance of the result set it gives back. While there may be millions of web pages that include a particular word or phrase, some pages may be more relevant, popular, or authoritative than others. Most search engines employ methods to rank the results to provide the "best" results first. How a search engine decides which pages are the best matches, and what order the results should be shown in, varies widely from one engine to another. The methods also change over time as Internet usage changes and new techniques evolve. There are two main types of search engine that have evolved: one is a system of predefined and hierarchically ordered keywords that humans have programmed extensively. The other is a system that generates an "inverted index" by analyzing texts it locates. This first form relies much more heavily on the computer itself to do the bulk of the work.
 
 Most Web search engines are commercial ventures supported by advertising revenue and thus some of them allow advertisers to have their listings ranked higher in search results for a fee. Search engines that do not accept money for their search results make money by running search related ads alongside the regular search engine results. The search engines make money every time someone clicks on one of these ads.
+
+# Setup of this application
+
+- Install  [MySQL ODBC connector](https://dev.mysql.com/downloads/connector/odbc/);
+- Choose a MySQL hosting service and create the MySQL database;
+- Configure ODBC connection on application start-up:
+![WebSearchEngine-MySQL.png](WebSearchEngine-MySQL.png).

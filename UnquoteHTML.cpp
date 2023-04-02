@@ -286,7 +286,7 @@ static const EntityNameEntry StaticEntityNames[] =
 	{ "lsaquo", 8249 },
 	{ "rsaquo", 8250 },
 	{ "euro", 8364 },
-	{ NULL, 0 } /* marks end of list */
+	{ nullptr, 0 } /* marks end of list */
 } /*StaticEntityNames*/;
 
 typedef std::map<std::string, unsigned int> EntityNameMap;
@@ -309,7 +309,7 @@ static void WriteUTF8(std::string& Out, unsigned int Ch)
 	}
 	else
 	{
-		Out += Ch;
+		Out += (char)Ch;
 	} /*if*/
 } /*WriteUTF8*/
 
@@ -326,7 +326,7 @@ const std::string UnquoteHTML(const std::string& InBuffer)
 		MatchHexNumber,
 	} MatchState;
 	std::string MatchingName;
-	unsigned int CharCode;
+	unsigned int CharCode = 0;
 	bool ProcessedChar, GotCharCode;
 	MatchState = NoMatch;
 	std::string OutBuffer;
@@ -376,7 +376,7 @@ const std::string UnquoteHTML(const std::string& InBuffer)
 						ThisEntry = StaticEntityNames;
 						for (;;)
 						{
-							if (ThisEntry->Name == NULL)
+							if (ThisEntry->Name == nullptr)
 								break;
 							EntityNames.insert(EntityNamePair(std::string(ThisEntry->Name), ThisEntry->Value));
 							++ThisEntry;

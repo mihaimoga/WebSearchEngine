@@ -182,7 +182,7 @@ int findAndReplaceAll(std::wstring& data, std::wstring toSearch, std::wstring re
 // trim from start (in place)
 static inline std::wstring ltrim(std::wstring s) {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-		return !iswspace(ch);
+		return !iswspace((wint_t)ch);
 	}));
 	return s;
 }
@@ -190,7 +190,7 @@ static inline std::wstring ltrim(std::wstring s) {
 // trim from end (in place)
 static inline std::wstring rtrim(std::wstring s) {
 	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-		return !iswspace(ch);
+		return !iswspace((wint_t)ch);
 	}).base(), s.end());
 	return s;
 }
@@ -205,7 +205,7 @@ static inline std::wstring trim(std::wstring s)
 static inline std::wstring to_lower(std::wstring s)
 {
 	std::transform(s.begin(), s.end(), s.begin(),
-		[](unsigned char c) { return std::tolower(c); });
+		[](wchar_t c) { return (wchar_t)std::tolower(c); });
 	return s;
 }
 
@@ -213,7 +213,7 @@ static inline std::wstring to_lower(std::wstring s)
 static inline std::wstring to_upper(std::wstring s)
 {
 	std::transform(s.begin(), s.end(), s.begin(),
-		[](unsigned char c) { return std::toupper(c); });
+		[](wchar_t c) { return (wchar_t)std::toupper(c); });
 	return s;
 }
 
@@ -283,7 +283,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 		const std::wstring& pURL = utf8_to_wstring(lpszURL);
 		OutputDebugString(CString(pURL.c_str()) + _T("\n"));
 		// OutputDebugString(CString(pTitle.c_str()) + _T("\n"));
-		std::wstring& pPlainText = trim(utf8_to_wstring(UnquoteHTML(pHtmlToText.Convert(pHtmlContent))));
+		std::wstring pPlainText = trim(utf8_to_wstring(UnquoteHTML(pHtmlToText.Convert(pHtmlContent))));
 		findAndReplaceAll(pPlainText, _T("\t"), _T(" "));
 		findAndReplaceAll(pPlainText, _T("\n"), _T(" "));
 		findAndReplaceAll(pPlainText, _T("\r"), _T(" "));

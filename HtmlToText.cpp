@@ -119,6 +119,8 @@ const std::string& CHtmlToText::Convert(const std::string& html)
 	return _text;
 }
 
+char toclower(char ch) { return (char)tolower(ch); }
+
 std::string CHtmlToText::ParseTag(bool& selfClosing)
 {
 	std::string tag;
@@ -211,7 +213,7 @@ std::string CHtmlToText::ParseTag(bool& selfClosing)
 			(Peek() != '/') && (Peek() != '>'))
 			MoveAhead();
 		tag = _html.substr(start, _pos - start);
-		std::transform(tag.begin(), tag.end(), tag.begin(), ::tolower);
+		std::transform(tag.begin(), tag.end(), tag.begin(), toclower);
 
 		// Parse rest of tag
 		while (!EndOfText() && (Peek() != '>'))
