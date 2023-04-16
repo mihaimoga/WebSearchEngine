@@ -136,16 +136,16 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	SQLRETURN nRet = m_pEnvironment.Create();
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
-	nRet = m_pEnvironment.SetAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3);
+	nRet = m_pEnvironment.SetAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
-	nRet = m_pEnvironment.SetAttrU(SQL_ATTR_CONNECTION_POOLING, SQL_CP_OFF);
+	nRet = m_pEnvironment.SetAttrU(SQL_ATTR_CONNECTION_POOLING, SQL_CP_DEFAULT);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
 	nRet = m_pConnection.Create(m_pEnvironment);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pConnection);
 
-	_stprintf(m_sConnectionInString, _T("Driver={MySQL ODBC 3.51 Driver};Server=%s;Port=%s;Database=%s;Uid=%s;Pwd=%s;"),
+	_stprintf(m_sConnectionInString, _T("Driver={MySQL ODBC 8.0 Unicode Driver};Server=%s;Port=%s;Database=%s;User=%s;Password=%s;"),
 		strHostName.GetBuffer(0), strHostPort.GetBuffer(0), strDatabase.GetBuffer(0), strUsername.GetBuffer(0), lpszPassword);
 	strHostName.ReleaseBuffer();
 	strHostPort.ReleaseBuffer();
