@@ -1,40 +1,53 @@
 <?php
-/* This file is part of Web Search Engine application developed by Stefan-Mihai MOGA.
+/* This file is part of WebSearchEngine application developed by Stefan-Mihai MOGA.
 
-Web Search Engine is free software: you can redistribute it and/or modify it
+WebSearchEngine is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the Open
 Source Initiative, either version 3 of the License, or any later version.
 
-Web Search Engine is distributed in the hope that it will be useful, but
+WebSearchEngine is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-Web Search Engine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
+WebSearchEngine.  If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 
 $servername = "localhost";
 $username = "r46882text_engine";
 $password = "TextMining2021!@#$";
 $dbname = "r46882text_mining";
 
+
+function content_index($content, $keyword) {
+	$pos = -1;
+	foreach ($keyword as $key => $value) {
+		$tmp = stripos($content, $value);
+		$pos = ($pos < 0) ? $tmp : min($pos, $tmp);
+	}
+	return $pos;
+}
+
+
 echo "<!DOCTYPE html>\n";
 echo "<html>\n";
 echo "\t<head>\n";
 echo "\t\t<title>" . $_GET['q'] . "</title>\n";
 echo "\t\t<meta charset=\"utf-8\">\n";
-echo "\t\t<link rel=\"icon\" type=\"image/png\" href=\"https://www.mihaimoga.com/images/romania-flag-square-icon-256.png\">\n";
+echo "\t\t<link rel=\"icon\" type=\"image/png\" href=\"romania-flag-square-icon-256.png\">\n";
 echo "\t\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n";
-echo "\t\t<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">\n";
-echo "\t\t<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js\"></script>\n";
-echo "\t\t<script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js\"></script>\n";
+echo "\t\t<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css\" rel=\"stylesheet\" integrity=\"sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65\" crossorigin=\"anonymous\">\n";
 echo "\t</head>\n";
 echo "\t<body>\n";
 $search = strtolower($_GET['q']);
 $counter = 0;
 $mysql_clause = "";
 $mysql_select = "";
+$token_find = array();
+$token_replace = array();
 $token = strtok($search, "\t\n\r\"\' !?#$%&|(){}[]*/+-:;<>=.,");
 while ($token !== false) {
+	array_push($token_find, $token);
+	array_push($token_replace, "<em>" . $token . "</em>");
 	if ($counter == 0) {
 		$mysql_clause = "SELECT DISTINCT `webpage_id` FROM `occurrence` INNER JOIN `keyword` USING (`keyword_id`) WHERE `name` = '$token'";
 		$mysql_select = "(`name` = '$token')";
@@ -60,15 +73,17 @@ if ($counter > 0)
 	if (mysqli_num_rows($result) > 0) {
 	    // output data of each row
 	    while($row = mysqli_fetch_assoc($result)) {
-	        echo "<div class=\"container-fluid\">" . $row["webpage_id"] . ". <b>" . $row["title"] . "</b> Score: " . $row["score"] . "<br />";
+	        echo "<div class=\"container-fluid\">" . $row["webpage_id"] . ". <strong>" . $row["title"] . "</strong> Score: " . $row["score"] . "<br />";
 	        echo "<a href=\"" . $row["url"] . "\">" . $row["url"] . "</a><br />";
-	        echo "<i>" . utf8_encode(substr($row["content"], 0, 1024)) . "</i></div><br />\n";
+	        // echo "<i>" . utf8_encode(substr($row["content"], 0, 1024)) . "</i></div><br />\n";
+	        echo str_ireplace($token_find, $token_replace, substr($row["content"], content_index($row["content"], $token_find), 1024)) . "</div><br />\n";
 	    }
 	} else {
 	    echo "0 results";
 	}
 	mysqli_close($conn);
 }
+echo "\t\t<script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js\" integrity=\"sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4\" crossorigin=\"anonymous\"></script>\n";
 echo "\t</body>\n";
 echo "</html>\n";
 ?>
