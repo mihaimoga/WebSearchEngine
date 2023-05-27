@@ -58,6 +58,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <sstream>
+#include <iomanip>
 
 #define REGKEY_SECTION _T("Settings")
 #define REGKEY_DBTYPE _T("dbtype")

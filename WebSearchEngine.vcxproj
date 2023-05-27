@@ -187,10 +187,12 @@
   <ItemGroup>
     <ClInclude Include="ConnectionSettingsDlg.h" />
     <ClInclude Include="HtmlToText.h" />
+    <ClInclude Include="HyperlinkStatic.h" />
     <ClInclude Include="ODBCWrappers.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="VersionInfo.h" />
     <ClInclude Include="WebSearchEngine.h" />
     <ClInclude Include="WebSearchEngineDlg.h" />
     <ClInclude Include="WebSearchEngineExt.h" />
@@ -198,6 +200,7 @@
   <ItemGroup>
     <ClCompile Include="ConnectionSettingsDlg.cpp" />
     <ClCompile Include="HtmlToText.cpp" />
+    <ClCompile Include="HyperlinkStatic.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -205,6 +208,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="UnquoteHTML.cpp" />
+    <ClCompile Include="VersionInfo.cpp" />
     <ClCompile Include="WebSearchEngine.cpp" />
     <ClCompile Include="WebSearchEngineDlg.cpp" />
     <ClCompile Include="WebSearchEngineExt.cpp" />

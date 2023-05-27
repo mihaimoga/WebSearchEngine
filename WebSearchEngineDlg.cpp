@@ -20,6 +20,8 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #include "WebSearchEngineExt.h"
 #include "ConnectionSettingsDlg.h"
 #include "HtmlToText.h"
+#include "HyperlinkStatic.h"
+#include "VersionInfo.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -29,35 +31,87 @@ DWORD WINAPI CrawlingThreadProc(LPVOID lpParam);
 
 // CAboutDlg dialog used for App About
 
-class CAboutDlg : public CDialogEx
+class CAboutDlg : public CDialog
 {
 public:
 	CAboutDlg();
 
 	// Dialog Data
-#ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
-#endif
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 // Implementation
+public:
+	virtual BOOL OnInitDialog();
+	afx_msg void OnDestroy();
+
 protected:
+	CStatic m_ctrlVersion;
+	CEdit m_ctrlWarning;
+	CVersionInfo m_pVersionInfo;
+	CHyperlinkStatic m_ctrlWebsite;
+	CHyperlinkStatic m_ctrlEmail;
+
 	DECLARE_MESSAGE_MAP()
 };
 
-CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
+CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
 {
 }
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
+	CDialog::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_VERSION, m_ctrlVersion);
+	DDX_Control(pDX, IDC_WARNING, m_ctrlWarning);
+	DDX_Control(pDX, IDC_WEBSITE, m_ctrlWebsite);
+	DDX_Control(pDX, IDC_EMAIL, m_ctrlEmail);
 }
 
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
+
+BOOL CAboutDlg::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	TCHAR lpszDrive[_MAX_DRIVE];
+	TCHAR lpszDirectory[_MAX_DIR];
+	TCHAR lpszFilename[_MAX_FNAME];
+	TCHAR lpszExtension[_MAX_EXT];
+	TCHAR lpszFullPath[_MAX_PATH];
+
+	VERIFY(0 == _tsplitpath_s(AfxGetApp()->m_pszHelpFilePath, lpszDrive, _MAX_DRIVE, lpszDirectory, _MAX_DIR, lpszFilename, _MAX_FNAME, lpszExtension, _MAX_EXT));
+	VERIFY(0 == _tmakepath_s(lpszFullPath, _MAX_PATH, lpszDrive, lpszDirectory, lpszFilename, _T(".exe")));
+
+	if (m_pVersionInfo.Load(lpszFullPath))
+	{
+		CString strName = m_pVersionInfo.GetProductName().c_str();
+		CString strVersion = m_pVersionInfo.GetProductVersionAsString().c_str();
+		strVersion.Replace(_T(" "), _T(""));
+		strVersion.Replace(_T(","), _T("."));
+		const int nFirst = strVersion.Find(_T('.'));
+		const int nSecond = strVersion.Find(_T('.'), nFirst + 1);
+		strVersion.Truncate(nSecond);
+		m_ctrlVersion.SetWindowText(strName + _T(" version ") + strVersion);
+	}
+
+	m_ctrlWarning.SetWindowText(_T("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>."));
+
+	m_ctrlWebsite.SetHyperlink(_T("https://www.emvs.site/"));
+	m_ctrlEmail.SetHyperlink(_T("mailto:contact@emvs.site"));
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// EXCEPTION: OCX Property Pages should return FALSE
+}
+
+void CAboutDlg::OnDestroy()
+{
+	CDialog::OnDestroy();
+}
 
 // CWebSearchEngineDlg dialog
 
@@ -164,7 +218,7 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, `url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, `content` TEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, `name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `occurrence` (`webpage_id` BIGINT NOT NULL, `keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, `pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE OR REPLACE UNIQUE INDEX index_name ON `keyword`(`name`);")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE UNIQUE INDEX index_name ON `keyword`(`name`);")));
 
 	m_hThread = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CrawlingThreadProc, this, 0, &m_nThreadID);
 
