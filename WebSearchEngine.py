@@ -25,12 +25,7 @@ DATABASE = "r46882text_mining"
 USERNAME = "r46882text_engine"
 PASSWORD = "TextMining2021!@#$"
 
-visited_urls = []
-frontier_array = []
-frontier_score = {}
-
 webpage_count = 0
-keyword_array = []
 
 
 def create_database():
@@ -51,6 +46,16 @@ def create_database():
         cursor.execute(sql_drop_table)
         sql_drop_table = "DROP TABLE IF EXISTS `webpage`"
         cursor.execute(sql_drop_table)
+        sql_drop_table = "DROP TABLE IF EXISTS `frontier`"
+        cursor.execute(sql_drop_table)
+        sql_create_table = (
+            "CREATE TABLE `frontier` (`url_id` BIGINT NOT NULL AUTO_INCREMENT, "
+            "`address` VARCHAR(256) NOT NULL, `visited` BOOL NOT NULL, "
+            "`score` BIGINT NOT NULL, PRIMARY KEY(`url_id`)) ENGINE=InnoDB"
+        )
+        cursor.execute(sql_create_table)
+        sql_create_index = "CREATE UNIQUE INDEX frontier_address ON `frontier`(`address`)"
+        cursor.execute(sql_create_index)
         sql_create_table = (
             "CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, "
             "`url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, "
@@ -70,9 +75,7 @@ def create_database():
             "FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB"
         )
         cursor.execute(sql_create_table)
-        sql_create_index = (
-            "CREATE OR REPLACE UNIQUE INDEX index_name ON `keyword`(`name`)"
-        )
+        sql_create_index = "CREATE UNIQUE INDEX index_name ON `keyword`(`name`)"
         cursor.execute(sql_create_index)
         sql_no_of_words = (
             "CREATE OR REPLACE FUNCTION no_of_words(token VARCHAR(256)) RETURNS "
@@ -109,201 +112,236 @@ def create_database():
         return True
 
 
-def add_url_to_frontier(url):
-    global visited_urls
-    global frontier_array
-    global frontier_score
-    found = False
+def add_url_to_frontier(connection, url):
     if url.find("#") > 0:
         url = url.split("#")[0]
     if len(url) > 256:
-        return
+        return False
     if url.endswith(".3g2"):
-        return  # 3GPP2 multimedia file
+        return False  # 3GPP2 multimedia file
     if url.endswith(".3gp"):
-        return  # 3GPP multimedia file
+        return False  # 3GPP multimedia file
     if url.endswith(".7z"):
-        return  # 7-Zip compressed file
+        return False  # 7-Zip compressed file
     if url.endswith(".ai"):
-        return  # Adobe Illustrator file
+        return False  # Adobe Illustrator file
     if url.endswith(".apk"):
-        return  # Android package file
+        return False  # Android package file
     if url.endswith(".arj"):
-        return  # ARJ compressed file
+        return False  # ARJ compressed file
     if url.endswith(".aif"):
-        return  # AIF audio file
+        return False  # AIF audio file
     if url.endswith(".avi"):
-        return  # AVI file
+        return False  # AVI file
     if url.endswith(".bat"):
-        return  # Batch file
+        return False  # Batch file
     if url.endswith(".bin"):
-        return  # Binary disc image
+        return False  # Binary disc image
     if url.endswith(".bmp"):
-        return  # Bitmap image
+        return False  # Bitmap image
     if url.endswith(".cda"):
-        return  # CD audio track file
+        return False  # CD audio track file
     if url.endswith(".com"):
-        return  # MS-DOS command file
+        return False  # MS-DOS command file
     if url.endswith(".csv"):
-        return  # Comma separated value file
+        return False  # Comma separated value file
     if url.endswith(".dat"):
-        return  # Binary Data file
+        return False  # Binary Data file
     if url.endswith(".db") or url.endswith(".dbf"):
-        return  # Database file
+        return False  # Database file
     if url.endswith(".deb"):
-        return  # Debian software package file
+        return False  # Debian software package file
     if url.endswith(".dmg"):
-        return  # macOS X disk image
+        return False  # macOS X disk image
     if url.endswith(".doc") or url.endswith(".docx"):
-        return  # Microsoft Word Open XML document file
+        return False  # Microsoft Word Open XML document file
     if url.endswith(".email") or url.endswith(".eml"):
-        return  # E-mail message file from multiple e-mail clients
+        return False  # E-mail message file from multiple e-mail clients
     if url.endswith(".emlx"):
-        return  # Apple Mail e-mail file
+        return False  # Apple Mail e-mail file
     if url.endswith(".exe"):
-        return  # MS-DOS executable file
+        return False  # MS-DOS executable file
     if url.endswith(".flv"):
-        return  # Adobe Flash file
+        return False  # Adobe Flash file
     if url.endswith(".fon"):
-        return  # Generic font file
+        return False  # Generic font file
     if url.endswith(".fnt"):
-        return  # Windows font file
+        return False  # Windows font file
     if url.endswith(".gadget"):
-        return  # Windows gadget
+        return False  # Windows gadget
     if url.endswith(".gif"):
-        return  # GIF image
+        return False  # GIF image
     if url.endswith(".h264"):
-        return  # H.264 video file
+        return False  # H.264 video file
     if url.endswith(".ico"):
-        return  # Icon file
+        return False  # Icon file
     if url.endswith(".iso"):
-        return  # ISO disc image
+        return False  # ISO disc image
     if url.endswith(".jar"):
-        return  # Java archive file
+        return False  # Java archive file
     if url.endswith(".jpg") or url.endswith(".jpeg"):
-        return  # JPEG image
+        return False  # JPEG image
     if url.endswith(".log"):
-        return  # Log file
+        return False  # Log file
     if url.endswith(".m4v"):
-        return  # Apple MP4 video file
+        return False  # Apple MP4 video file
     if url.endswith(".mdb"):
-        return  # Microsoft Access database file
+        return False  # Microsoft Access database file
     if url.endswith(".mid") or url.endswith(".midi"):
-        return  # MIDI audio file
+        return False  # MIDI audio file
     if url.endswith(".mov"):
-        return  # Apple QuickTime movie file
+        return False  # Apple QuickTime movie file
     if url.endswith(".mp3") or url.endswith(".mpa"):
-        return  # MP3 audio file
+        return False  # MP3 audio file
     if url.endswith(".mp4"):
-        return  # MPEG4 video file
+        return False  # MPEG4 video file
     if url.endswith(".mpa"):
-        return  # MPEG-2 audio file
+        return False  # MPEG-2 audio file
     if url.endswith(".mpg") or url.endswith(".mpeg"):
-        return  # MPEG video file
+        return False  # MPEG video file
     if url.endswith(".msg"):
-        return  # Microsoft Outlook e-mail message file
+        return False  # Microsoft Outlook e-mail message file
     if url.endswith(".msi"):
-        return  # Windows installer package
+        return False  # Windows installer package
     if url.endswith(".odt"):
-        return  # OpenOffice Writer document file
+        return False  # OpenOffice Writer document file
     if url.endswith(".ods"):
-        return  # OpenOffice Calc spreadsheet file
+        return False  # OpenOffice Calc spreadsheet file
     if url.endswith(".oft"):
-        return  # Microsoft Outlook e-mail template file
+        return False  # Microsoft Outlook e-mail template file
     if url.endswith(".ogg"):
-        return  # Ogg Vorbis audio file
+        return False  # Ogg Vorbis audio file
     if url.endswith(".ost"):
-        return  # Microsoft Outlook e-mail storage file
+        return False  # Microsoft Outlook e-mail storage file
     if url.endswith(".otf"):
-        return  # Open type font file
+        return False  # Open type font file
     if url.endswith(".pkg"):
-        return  # Package file
+        return False  # Package file
     if url.endswith(".pdf"):
-        return  # Adobe PDF file
+        return False  # Adobe PDF file
     if url.endswith(".png"):
-        return  # PNG image
+        return False  # PNG image
     if url.endswith(".ppt") or url.endswith(".pptx"):
-        return  # Microsoft PowerPoint Open XML presentation
+        return False  # Microsoft PowerPoint Open XML presentation
     if url.endswith(".ps"):
-        return  # PostScript file
+        return False  # PostScript file
     if url.endswith(".psd"):
-        return  # PSD image
+        return False  # PSD image
     if url.endswith(".pst"):
-        return  # Microsoft Outlook e-mail storage file
+        return False  # Microsoft Outlook e-mail storage file
     if url.endswith(".rar"):
-        return  # RAR file
+        return False  # RAR file
     if url.endswith(".rpm"):
-        return  # Red Hat Package Manager
+        return False  # Red Hat Package Manager
     if url.endswith(".rtf"):
-        return  # Rich Text Format file
+        return False  # Rich Text Format file
     if url.endswith(".sql"):
-        return  # SQL database file
+        return False  # SQL database file
     if url.endswith(".svg"):
-        return  # Scalable Vector Graphics file
+        return False  # Scalable Vector Graphics file
     if url.endswith(".swf"):
-        return  # Shockwave flash file
+        return False  # Shockwave flash file
     if url.endswith(".xls") or url.endswith(".xlsx"):
-        return  # Microsoft Excel Open XML spreadsheet file
+        return False  # Microsoft Excel Open XML spreadsheet file
     if url.endswith(".toast"):
-        return  # Toast disc image
+        return False  # Toast disc image
     if url.endswith(".tar"):
-        return  # Linux tarball file archive
+        return False  # Linux tarball file archive
     if url.endswith(".tar.gz"):
-        return  # Tarball compressed file
+        return False  # Tarball compressed file
     if url.endswith(".tex"):
-        return  # A LaTeX document file
+        return False  # A LaTeX document file
     if url.endswith(".ttf"):
-        return  # TrueType font file
+        return False  # TrueType font file
     if url.endswith(".txt"):
-        return  # Plain text file
+        return False  # Plain text file
     if url.endswith(".tif") or url.endswith(".tiff"):
-        return  # TIFF image
+        return False  # TIFF image
     if url.endswith(".vcd"):
-        return  # Virtual CD
+        return False  # Virtual CD
     if url.endswith(".vcf"):
-        return  # E-mail contact file
+        return False  # E-mail contact file
     if url.endswith(".vob"):
-        return  # DVD Video Object
+        return False  # DVD Video Object
     if url.endswith(".xml"):
-        return  # XML file
+        return False  # XML file
     if url.endswith(".wav") or url.endswith(".wma"):
-        return  # WAV file
+        return False  # WAV file
     if url.endswith(".wmv"):
-        return  # Windows Media Video file
+        return False  # Windows Media Video file
     if url.endswith(".wpd"):
-        return  # WordPerfect document
+        return False  # WordPerfect document
     if url.endswith(".wpl"):
-        return  # Windows Media Player playlist
+        return False  # Windows Media Player playlist
     if url.endswith(".wsf"):
-        return  # Windows script file
+        return False  # Windows script file
     if url.endswith(".z") or url.endswith(".zip"):
-        return  # Z or Zip compressed file
-    if url not in visited_urls:
-        if url in frontier_array:
-            found = True
-            frontier_score[url] = frontier_score.get(url) + 1
-        if not found:
-            frontier_array.append(url)
-            frontier_score[url] = 1
+        return False  # Z or Zip compressed file
+    try:
+        if not connection.is_connected():
+            time.sleep(30)
+            connection = mysql.connector.connect(
+                host=HOSTNAME,
+                database=DATABASE,
+                user=USERNAME,
+                password=PASSWORD,
+                autocommit=True,
+            )
+            server_info = connection.get_server_info()
+            print("MySQL connection is open on", server_info)
+        sql_statement = (
+            "UPDATE `frontier` SET `score` = `score` + 1 WHERE `address` = '%s'" % url
+        )
+        cursor = connection.cursor()
+        cursor.execute(sql_statement)
+        if cursor.rowcount == 0:
+            sql_statement = (
+                "INSERT INTO `frontier` (`address`,`visited`, `score`) VALUES ('%s', FALSE, 1)"
+                % url
+            )
+            cursor.execute(sql_statement)
+        cursor.close()
+    except mysql.connector.Error as err:
+        print("MySQL connector error:", str(err))
+        return False
+    finally:
+        pass
+    return True
 
 
-def extract_url_from_frontier():
-    global frontier_array
-    global frontier_score
-    score = 0
+def extract_url_from_frontier(connection):
     url = None
-    for item in frontier_array:
-        if score < frontier_score.get(item):
-            url = item
-            score = frontier_score.get(url)
-    if url:
-        frontier_array.remove(url)
-        del frontier_score[url]
-        visited_urls.append(url)
+    try:
+        if not connection.is_connected():
+            time.sleep(30)
+            connection = mysql.connector.connect(
+                host=HOSTNAME,
+                database=DATABASE,
+                user=USERNAME,
+                password=PASSWORD,
+                autocommit=True,
+            )
+            server_info = connection.get_server_info()
+            print("MySQL connection is open on", server_info)
+        sql_statement = "SELECT `address` FROM `frontier` WHERE `visited` = FALSE ORDER BY `score` DESC, `url_id` ASC LIMIT 1"
+        cursor = connection.cursor()
+        cursor.execute(sql_statement)
+        records = cursor.fetchall()
+        for row in records:
+            url = row[0]
+            sql_statement = (
+                "UPDATE `frontier` SET `visited` = TRUE WHERE `address` = '%s'" % url
+            )
+            cursor.execute(sql_statement)
+        cursor.close()
+    except mysql.connector.Error as err:
+        print("MySQL connector error:", str(err))
+    finally:
+        pass
     return url
 
 
-def download_page_from_url(url):
+def download_page_from_url(connection, url):
     html_title = None
     plain_text = None
     try:
@@ -315,7 +353,7 @@ def download_page_from_url(url):
         plain_text = " ".join(plain_text.split())
         for hyperlink in soup.find_all("a"):
             hyperlink = urljoin(url, hyperlink.get("href"))
-            add_url_to_frontier(hyperlink)
+            add_url_to_frontier(connection, hyperlink)
     except urllib.error.URLError as err:
         print(str(err))
     except urllib.error.HTTPError as err:
@@ -324,6 +362,34 @@ def download_page_from_url(url):
         print(str(err))
     finally:
         return html_title, plain_text
+
+
+def get_webpage_count(connection):
+    counter = -1
+    try:
+        if not connection.is_connected():
+            time.sleep(30)
+            connection = mysql.connector.connect(
+                host=HOSTNAME,
+                database=DATABASE,
+                user=USERNAME,
+                password=PASSWORD,
+                autocommit=True,
+            )
+            server_info = connection.get_server_info()
+            print("MySQL connection is open on", server_info)
+        sql_last_id = "SELECT COUNT(`webpage_id`) FROM `webpage`"
+        cursor = connection.cursor()
+        cursor.execute(sql_last_id)
+        records = cursor.fetchone()
+        counter = records[0]
+        cursor.close()
+    except mysql.connector.Error as err:
+        print("MySQL connector error:", str(err))
+        return -1
+    finally:
+        pass
+    return counter
 
 
 def web_search_engine():
@@ -338,11 +404,14 @@ def web_search_engine():
         )
         server_info = connection.get_server_info()
         print("MySQL connection is open on", server_info)
+        webpage_count = get_webpage_count(connection)
+        print("get_webpage_count = %d" % webpage_count)
+        add_url_to_frontier(connection, "https://en.wikipedia.org/")
         while True:
-            url = extract_url_from_frontier()
+            url = extract_url_from_frontier(connection)
             if url:
                 print("Crawling %s... [%d]" % (url, webpage_count + 1))
-                html_title, plain_text = download_page_from_url(url)
+                html_title, plain_text = download_page_from_url(connection, url)
                 if html_title and plain_text:
                     if len(html_title) > 0:
                         connection = analyze_webpage(
@@ -406,25 +475,16 @@ def analyze_webpage(connection, url, html_title, plain_text):
 
 def analyze_keyword(connection, plain_text):
     global webpage_count
-    global keyword_array
-    new_keyword = {}
-    old_keyword = {}
+    keyword_count = {}
     tokenize_list = tokenize(plain_text)
     for keyword in tokenize_list:
         if keyword.isascii() and keyword.isalnum():
             keyword = keyword.lower()
-            if keyword not in keyword_array:
-                keyword_array.append(keyword)
-                new_keyword[keyword] = 1
+            if keyword_count.get(keyword) is None:
+                keyword_count[keyword] = 1
             else:
-                if new_keyword.get(keyword) is not None:
-                    new_keyword[keyword] = new_keyword[keyword] + 1
-                else:
-                    if old_keyword.get(keyword) is None:
-                        old_keyword[keyword] = 1
-                    else:
-                        old_keyword[keyword] = old_keyword[keyword] + 1
-    for keyword in new_keyword.keys():
+                keyword_count[keyword] = keyword_count[keyword] + 1
+    for keyword in keyword_count.keys():
         done = False
         while not done:
             try:
@@ -443,54 +503,26 @@ def analyze_keyword(connection, plain_text):
                     cursor = connection.cursor()
                     cursor.execute(sql_last_id)
                 # keyword = keyword.encode(encoding='utf-8')
-                sql_statement = "INSERT INTO `keyword` (`name`) VALUES ('%s')" % keyword
+                sql_statement = (
+                    "SELECT `keyword_id` FROM `keyword` WHERE `name` = '%s'" % keyword
+                )
                 cursor = connection.cursor()
                 cursor.execute(sql_statement)
+                records = cursor.fetchone()
                 if cursor.rowcount == 0:
-                    keyword_array.remove(keyword)
-                    continue
-                sql_last_id = "SET @last_keyword_id = LAST_INSERT_ID()"
-                cursor.execute(sql_last_id)
-                sql_statement = (
-                    "INSERT INTO `occurrence` (`webpage_id`, `keyword_id`, `counter`, `pagerank`) "
-                    "VALUES (@last_webpage_id, @last_keyword_id, %d, 0.0)"
-                    % new_keyword[keyword]
-                )
-                cursor.execute(sql_statement)
-                cursor.close()
-                done = True
-            except mysql.connector.Error as err:
-                print("MySQL connector error:", str(err))
-            finally:
-                pass
-    for keyword in old_keyword.keys():
-        done = False
-        while not done:
-            try:
-                if not connection.is_connected():
-                    time.sleep(30)
-                    connection = mysql.connector.connect(
-                        host=HOSTNAME,
-                        database=DATABASE,
-                        user=USERNAME,
-                        password=PASSWORD,
-                        autocommit=True,
+                    sql_statement = (
+                        "INSERT INTO `keyword` (`name`) VALUES ('%s')" % keyword
                     )
-                    server_info = connection.get_server_info()
-                    print("MySQL connection is open on", server_info)
-                    sql_last_id = "SET @last_webpage_id = %d" % webpage_count
-                    cursor = connection.cursor()
+                    cursor.execute(sql_statement)
+                    sql_last_id = "SET @last_keyword_id = LAST_INSERT_ID()"
                     cursor.execute(sql_last_id)
-                sql_last_id = (
-                    "SET @last_keyword_id = (SELECT `keyword_id` FROM `keyword` WHERE `name` = '%s')"
-                    % keyword
-                )
-                cursor = connection.cursor()
-                cursor.execute(sql_last_id)
+                else:
+                    sql_last_id = "SET @last_keyword_id = %d" % records[0]
+                    cursor.execute(sql_last_id)
                 sql_statement = (
-                    "INSERT INTO `occurrence` (`webpage_id`, `keyword_id`, `counter`, `pagerank`) "
-                    "VALUES (@last_webpage_id, @last_keyword_id, %d, 0.0)"
-                    % old_keyword[keyword]
+                    "INSERT INTO `occurrence` (`webpage_id`, `keyword_id`, `counter`, `pagerank`) VALUES "
+                    "(@last_webpage_id, @last_keyword_id, %d, 0.0)"
+                    % keyword_count[keyword]
                 )
                 cursor.execute(sql_statement)
                 cursor.close()
@@ -570,6 +602,5 @@ def data_mining():
         pass
 
 
-add_url_to_frontier("https://en.wikipedia.org/")
 if create_database():
     web_search_engine()

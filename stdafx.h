@@ -11,6 +11,8 @@
 
 #include "targetver.h"
 
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
@@ -60,6 +62,7 @@
 #include <memory>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 #define REGKEY_SECTION _T("Settings")
 #define REGKEY_DBTYPE _T("dbtype")

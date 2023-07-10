@@ -218,7 +218,7 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, `url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, `content` TEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, `name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `occurrence` (`webpage_id` BIGINT NOT NULL, `keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, `pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE OR REPLACE UNIQUE INDEX index_name ON `keyword`(`name`);")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE UNIQUE INDEX index_name ON `keyword`(`name`);")));
 
 	m_hThread = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CrawlingThreadProc, this, 0, &m_nThreadID);
 

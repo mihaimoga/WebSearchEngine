@@ -78,7 +78,7 @@ const std::string& CHtmlToText::Convert(const std::string& html)
 			if (tag.compare("body") == 0)
 			{
 				// Discard content before <body>
-				_text.empty();
+				VERIFY(_text.empty());
 			}
 			else if (tag.compare("/body") == 0)
 			{
