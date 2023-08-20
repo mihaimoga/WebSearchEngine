@@ -35,7 +35,7 @@ class CGenericStatement // execute one SQL statement; no output returned
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, LPCTSTR lpszSQL)
+	bool Execute(CODBC::CConnection& pDbConnect, LPCTSTR lpszSQL)
 	{
 		// Create the statement object
 		CODBC::CStatement statement;
@@ -50,7 +50,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 
@@ -85,7 +85,7 @@ class CWebpageInsert : public CODBC::CAccessor<CWebpageInsertAccessor> // execut
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, const std::wstring& pURL, const std::wstring& pTitle, const std::wstring& pContent)
+	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pURL, const std::wstring& pTitle, const std::wstring& pContent)
 	{
 		ClearRecord();
 		// Create the statement object
@@ -108,7 +108,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 
@@ -139,7 +139,7 @@ class CKeywordInsert : public CODBC::CAccessor<CKeywordInsertAccessor> // execut
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
+	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
 		ClearRecord();
 		// Create the statement object
@@ -160,7 +160,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 
@@ -197,7 +197,7 @@ class COccurrenceInsert : public CODBC::CAccessor<COccurrenceInsertAccessor> // 
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID, const __int64& nCounter)
+	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID, const __int64& nCounter)
 	{
 		ClearRecord();
 		// Create the statement object
@@ -221,7 +221,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 
@@ -254,7 +254,7 @@ class COccurrenceUpdate : public CODBC::CAccessor<COccurrenceUpdateAccessor> // 
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID)
+	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID)
 	{
 		ClearRecord();
 		// Create the statement object
@@ -276,7 +276,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 
@@ -307,7 +307,7 @@ class CDataMiningUpdate : public CODBC::CAccessor<CDataMiningUpdateAccessor> // 
 {
 public:
 	// Methods
-	BOOLEAN Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
+	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
 		ClearRecord();
 		// Create the statement object
@@ -328,7 +328,7 @@ public:
 		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
-		return TRUE;
+		return true;
 	}
 };
 

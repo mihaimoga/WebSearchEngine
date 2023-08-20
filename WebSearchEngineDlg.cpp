@@ -16,11 +16,13 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 
 #include "stdafx.h"
 #include "WebSearchEngine.h"
+
 #include "WebSearchEngineDlg.h"
 #include "WebSearchEngineExt.h"
 #include "ConnectionSettingsDlg.h"
 #include "HtmlToText.h"
-#include "HyperlinkStatic.h"
+
+#include "HLinkCtrl.h"
 #include "VersionInfo.h"
 
 #ifdef _DEBUG
@@ -51,8 +53,8 @@ protected:
 	CStatic m_ctrlVersion;
 	CEdit m_ctrlWarning;
 	CVersionInfo m_pVersionInfo;
-	CHyperlinkStatic m_ctrlWebsite;
-	CHyperlinkStatic m_ctrlEmail;
+	CHLinkCtrl m_ctrlWebsite;
+	CHLinkCtrl m_ctrlEmail;
 
 	DECLARE_MESSAGE_MAP()
 };
@@ -101,8 +103,8 @@ BOOL CAboutDlg::OnInitDialog()
 
 	m_ctrlWarning.SetWindowText(_T("This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>."));
 
-	m_ctrlWebsite.SetHyperlink(_T("https://www.emvs.site/"));
-	m_ctrlEmail.SetHyperlink(_T("mailto:contact@emvs.site"));
+	m_ctrlWebsite.SetHyperLink(_T("https://www.moga.doctor/"));
+	m_ctrlEmail.SetHyperLink(_T("mailto:stefan-mihai@moga.doctor"));
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
@@ -215,9 +217,9 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `occurrence`;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `keyword`;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `webpage`;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, `url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, `content` TEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, `name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `occurrence` (`webpage_id` BIGINT NOT NULL, `keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, `pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB;")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, `url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, `content` LONGTEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, `name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `occurrence` (`webpage_id` BIGINT NOT NULL, `keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, `pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE UNIQUE INDEX index_name ON `keyword`(`name`);")));
 
 	m_hThread = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CrawlingThreadProc, this, 0, &m_nThreadID);

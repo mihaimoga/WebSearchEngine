@@ -54,10 +54,10 @@ void DisplayLastError(LPCTSTR lpszOperation)
 } // DisplayLastError(LPCTSTR lpszOperation)
 
 /// Returns a decrypted password read from Windows Registry, using Crypto API calls
-BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue, LPCTSTR lpszDefault)
+bool GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue, LPCTSTR lpszDefault)
 {
 	if (!lpszSection || !lpszEntry || !lpszValue)
-		return FALSE;
+		return false;
 
 	if (!USE_CRYPTO_METHODS)
 	{
@@ -74,7 +74,7 @@ BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 	DWORD dwHowManyBytes = 0;
 	LPBYTE lpcbTempBuffer = NULL;
 
-	BOOL bDecryptionDone = FALSE;
+	bool bDecryptionDone = false;
 	HCRYPTPROV hCryptoProvider = NULL;
 	HCRYPTHASH hCryptoHash = NULL;
 	HCRYPTKEY hCryptoKey = NULL;
@@ -96,7 +96,7 @@ BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 						{
 							if (CryptDecrypt(hCryptoKey, NULL, TRUE, 0, lpcbDataValue, &dwHowManyBytes))
 							{
-								bDecryptionDone = TRUE;
+								bDecryptionDone = true;
 								_tcscpy(lpszValue, (LPTSTR)lpcbDataValue);
 							}
 							else
@@ -133,7 +133,7 @@ BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 		if (!dwHowManyBytes)
 		{
 			_tcscpy(lpszValue, lpszDefault);
-			bDecryptionDone = TRUE;
+			bDecryptionDone = true;
 		}
 	}
 
@@ -144,10 +144,10 @@ BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 } // GetRegistryPassword( LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue, LPCTSTR lpszDefault )
 
 /// Writes an encrypted password to Windows Registry, using Crypto API calls
-BOOL SetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue)
+bool SetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue)
 {
 	if (!lpszSection || !lpszEntry || !lpszValue)
-		return FALSE;
+		return false;
 
 	if (!USE_CRYPTO_METHODS)
 	{
@@ -164,7 +164,7 @@ BOOL SetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 	const DWORD dwDataValueLen = PASSWORD_MAXLENGTH;
 	DWORD dwHowManyBytes = dwDataValueLen;
 
-	BOOL bEncryptionDone = FALSE;
+	bool bEncryptionDone = false;
 	HCRYPTPROV hCryptoProvider = NULL;
 	HCRYPTHASH hCryptoHash = NULL;
 	HCRYPTKEY hCryptoKey = NULL;

@@ -51,20 +51,25 @@ def create_database():
         sql_create_table = (
             "CREATE TABLE `frontier` (`url_id` BIGINT NOT NULL AUTO_INCREMENT, "
             "`address` VARCHAR(256) NOT NULL, `visited` BOOL NOT NULL, "
-            "`score` BIGINT NOT NULL, PRIMARY KEY(`url_id`)) ENGINE=InnoDB"
+            "`score` BIGINT NOT NULL, PRIMARY KEY(`url_id`)) ENGINE=InnoDB "
+            "CHARACTER SET utf8 COLLATE utf8_general_ci"
         )
         cursor.execute(sql_create_table)
-        sql_create_index = "CREATE UNIQUE INDEX frontier_address ON `frontier`(`address`)"
+        sql_create_index = (
+            "CREATE UNIQUE INDEX frontier_address ON `frontier`(`address`)"
+        )
         cursor.execute(sql_create_index)
         sql_create_table = (
             "CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, "
             "`url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, "
-            "`content` TEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB"
+            "`content` LONGTEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB "
+            "CHARACTER SET utf8 COLLATE utf8_general_ci"
         )
         cursor.execute(sql_create_table)
         sql_create_table = (
             "CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, "
-            "`name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB"
+            "`name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB "
+            "CHARACTER SET utf8 COLLATE utf8_general_ci"
         )
         cursor.execute(sql_create_table)
         sql_create_table = (
@@ -72,7 +77,8 @@ def create_database():
             "`keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, "
             "`pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), "
             "FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), "
-            "FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB"
+            "FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) "
+            "ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci"
         )
         cursor.execute(sql_create_table)
         sql_create_index = "CREATE UNIQUE INDEX index_name ON `keyword`(`name`)"
@@ -338,13 +344,24 @@ def extract_url_from_frontier(connection):
         print("MySQL connector error:", str(err))
     finally:
         pass
-    return url
+    return connection, url
 
 
 def download_page_from_url(connection, url):
     html_title = None
     plain_text = None
     try:
+        if not connection.is_connected():
+            time.sleep(30)
+            connection = mysql.connector.connect(
+                host=HOSTNAME,
+                database=DATABASE,
+                user=USERNAME,
+                password=PASSWORD,
+                autocommit=True,
+            )
+            server_info = connection.get_server_info()
+            print("MySQL connection is open on", server_info)
         req = Request(url)
         html_page = urlopen(req)
         soup = BeautifulSoup(html_page, "html.parser")
@@ -354,6 +371,8 @@ def download_page_from_url(connection, url):
         for hyperlink in soup.find_all("a"):
             hyperlink = urljoin(url, hyperlink.get("href"))
             add_url_to_frontier(connection, hyperlink)
+    except mysql.connector.Error as err:
+        print("MySQL connector error:", str(err))
     except urllib.error.URLError as err:
         print(str(err))
     except urllib.error.HTTPError as err:
@@ -361,7 +380,7 @@ def download_page_from_url(connection, url):
     except urllib.error.ContentTooShortError as err:
         print(str(err))
     finally:
-        return html_title, plain_text
+        return connection, html_title, plain_text
 
 
 def get_webpage_count(connection):
@@ -408,10 +427,10 @@ def web_search_engine():
         print("get_webpage_count = %d" % webpage_count)
         add_url_to_frontier(connection, "https://en.wikipedia.org/")
         while True:
-            url = extract_url_from_frontier(connection)
+            connection, url = extract_url_from_frontier(connection)
             if url:
                 print("Crawling %s... [%d]" % (url, webpage_count + 1))
-                html_title, plain_text = download_page_from_url(connection, url)
+                connection, html_title, plain_text = download_page_from_url(connection, url)
                 if html_title and plain_text:
                     if len(html_title) > 0:
                         connection = analyze_webpage(

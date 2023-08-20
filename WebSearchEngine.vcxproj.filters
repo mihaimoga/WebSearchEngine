@@ -45,10 +45,10 @@
     <ClInclude Include="WebSearchEngineExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HyperlinkStatic.h">
+    <ClInclude Include="VersionInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VersionInfo.h">
+    <ClInclude Include="HLinkCtrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -74,10 +74,10 @@
     <ClCompile Include="WebSearchEngineExt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HyperlinkStatic.cpp">
+    <ClCompile Include="VersionInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VersionInfo.cpp">
+    <ClCompile Include="HLinkCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

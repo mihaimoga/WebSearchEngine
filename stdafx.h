@@ -88,5 +88,5 @@
 	handle.ValidateReturnValue(nRet); \
 	if (!SQL_SUCCEEDED(nRet)) \
   { \
-  return FALSE; \
+  return false; \
   }

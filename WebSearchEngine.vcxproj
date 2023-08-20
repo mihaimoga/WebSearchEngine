@@ -188,8 +188,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConnectionSettingsDlg.h" />
+    <ClInclude Include="HLinkCtrl.h" />
     <ClInclude Include="HtmlToText.h" />
-    <ClInclude Include="HyperlinkStatic.h" />
     <ClInclude Include="ODBCWrappers.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -201,8 +201,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConnectionSettingsDlg.cpp" />
+    <ClCompile Include="HLinkCtrl.cpp" />
     <ClCompile Include="HtmlToText.cpp" />
-    <ClCompile Include="HyperlinkStatic.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

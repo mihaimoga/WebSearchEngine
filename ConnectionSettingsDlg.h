@@ -27,9 +27,9 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 // maximum length of the password stored as array of BYTEs in Windows Registry
 #define PASSWORD_MAXLENGTH 128
 
-BOOL GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue, LPCTSTR lpszDefault);
+bool GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue, LPCTSTR lpszDefault);
 
-BOOL SetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue);
+bool SetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lpszEntry, LPTSTR lpszValue);
 
 // CConnectionSettingsDlg dialog
 

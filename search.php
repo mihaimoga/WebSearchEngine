@@ -42,12 +42,12 @@ $search = strtolower($_GET['q']);
 $counter = 0;
 $mysql_clause = "";
 $mysql_select = "";
-$token_find = array();
-$token_replace = array();
+// $token_find = array();
+// $token_replace = array();
 $token = strtok($search, "\t\n\r\"\' !?#$%&|(){}[]*/+-:;<>=.,");
 while ($token !== false) {
-	array_push($token_find, $token);
-	array_push($token_replace, "<em>" . $token . "</em>");
+	// array_push($token_find, $token);
+	// array_push($token_replace, "<em>" . $token . "</em>");
 	if ($counter == 0) {
 		$mysql_clause = "SELECT DISTINCT `webpage_id` FROM `occurrence` INNER JOIN `keyword` USING (`keyword_id`) WHERE `name` = '$token'";
 		$mysql_select = "(`name` = '$token')";
@@ -75,8 +75,8 @@ if ($counter > 0)
 	    while($row = mysqli_fetch_assoc($result)) {
 	        echo "<div class=\"container-fluid\">" . $row["webpage_id"] . ". <strong>" . $row["title"] . "</strong> Score: " . $row["score"] . "<br />";
 	        echo "<a href=\"" . $row["url"] . "\">" . $row["url"] . "</a><br />";
-	        // echo "<i>" . utf8_encode(substr($row["content"], 0, 1024)) . "</i></div><br />\n";
-	        echo str_ireplace($token_find, $token_replace, substr($row["content"], content_index($row["content"], $token_find), 1024)) . "</div><br />\n";
+	        echo "<i>" . utf8_encode(substr($row["content"], 0, 1024)) . "</i></div><br />\n";
+	        // echo str_ireplace($token_find, $token_replace, substr($row["content"], content_index($row["content"], $token_find), 1024)) . "</div><br />\n";
 	    }
 	} else {
 	    echo "0 results";
