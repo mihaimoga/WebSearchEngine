@@ -165,6 +165,15 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_SEPARATOR);
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
+		pSysMenu->AppendMenu(MF_SEPARATOR);
+		pSysMenu->AppendMenu(MF_STRING, IDM_TWITTER, _T("Twitter"));
+		pSysMenu->AppendMenu(MF_STRING, IDM_LINKEDIN, _T("LinkedIn"));
+		pSysMenu->AppendMenu(MF_STRING, IDM_FACEBOOK, _T("Facebook"));
+		pSysMenu->AppendMenu(MF_STRING, IDM_INSTAGRAM, _T("Instagram"));
+		pSysMenu->AppendMenu(MF_SEPARATOR);
+		pSysMenu->AppendMenu(MF_STRING, IDM_ISSUES, _T("Issues"));
+		pSysMenu->AppendMenu(MF_STRING, IDM_DISCUSSIONS, _T("Discussions"));
+		pSysMenu->AppendMenu(MF_STRING, IDM_WIKI, _T("Wiki"));
 	}
 
 	// Set the icon for this dialog.  The framework does this automatically
@@ -236,7 +245,57 @@ void CWebSearchEngineDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	}
 	else
 	{
-		CDialogEx::OnSysCommand(nID, lParam);
+		if (nID == IDM_TWITTER)
+		{
+			::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://twitter.com/stefanmihaimoga"), nullptr, nullptr, SW_SHOW);
+		}
+		else
+		{
+			if (nID == IDM_LINKEDIN)
+			{
+				::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.linkedin.com/in/stefanmihaimoga/"), nullptr, nullptr, SW_SHOW);
+			}
+			else
+			{
+				if (nID == IDM_FACEBOOK)
+				{
+					::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.facebook.com/stefanmihaimoga"), nullptr, nullptr, SW_SHOW);
+				}
+				else
+				{
+					if (nID == IDM_INSTAGRAM)
+					{
+						::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.instagram.com/stefanmihaimoga/"), nullptr, nullptr, SW_SHOW);
+					}
+					else
+					{
+						if (nID == IDM_ISSUES)
+						{
+							::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/issues"), nullptr, nullptr, SW_SHOW);
+						}
+						else
+						{
+							if (nID == IDM_DISCUSSIONS)
+							{
+								::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/discussions"), nullptr, nullptr, SW_SHOW);
+							}
+							else
+							{
+								if (nID == IDM_WIKI)
+								{
+									::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/wiki"), nullptr, nullptr, SW_SHOW);
+								}
+								else
+								{
+									CDialog::OnSysCommand(nID, lParam);
+								}
+							}
+						}
+					}
+
+				}
+			}
+		}
 	}
 }
 

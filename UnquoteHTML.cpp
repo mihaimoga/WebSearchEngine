@@ -330,7 +330,7 @@ const std::string UnquoteHTML(const std::string& InBuffer)
 	bool ProcessedChar, GotCharCode;
 	MatchState = NoMatch;
 	std::string OutBuffer;
-	for (int index = 0; index < InBuffer.length(); index++)
+	for (size_t index = 0; index < InBuffer.length(); index++)
 	{
 		const unsigned char ThisCh = InBuffer[index];
 		ProcessedChar = false; /* to begin with */
