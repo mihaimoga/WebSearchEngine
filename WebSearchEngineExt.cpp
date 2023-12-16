@@ -227,7 +227,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 	if (pHtmlFile.is_open())
 	{
 		pHtmlFile.seekg(0, std::ios::end);
-		pHtmlContent.reserve(pHtmlFile.tellg());
+		pHtmlContent.reserve(static_cast<unsigned int>(pHtmlFile.tellg()));
 		pHtmlFile.seekg(0, std::ios::beg);
 
 		pHtmlContent.assign((std::istreambuf_iterator<char>(pHtmlFile)),

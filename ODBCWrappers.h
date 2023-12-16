@@ -85,6 +85,8 @@ History: PJN / 24-09-2011 1. Initial creation
          PJN / 12-05-2023 1. Updated copyright details
                           2. Updated modules to indicate that it needs to be compiled using /std:c++17. Thanks to Martin Richter
                           for reporting this issue.
+         PJN / 15-12-2023 1. Updated module to remove usage of _if_exists by now using ODBCVER and _ATL_MODULES 
+                          preprocessor macro checks along with SFINAE.
 
 Copyright (c) 2011 - 2023 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
 
@@ -107,7 +109,7 @@ to maintain a single distribution point for the source code.
 
 #if _MSVC_LANG < 201703
 #error ODBCWrappers requires a minimum C++ language standard of /std:c++17
-#endif //#if __cplusplus < 201703
+#endif //#if _MSVC_LANG < 201703
 
 #ifndef __ODBCWRAPPERS_H__
 #define __ODBCWRAPPERS_H__
@@ -539,7 +541,7 @@ namespace CODBC
 			}
 		}
 
-		_NODISCARD operator SQLHANDLE() const noexcept
+		[[nodiscard]] operator SQLHANDLE() const noexcept
 		{
 			return m_h;
 		}
@@ -581,7 +583,7 @@ namespace CODBC
 			return SQLGetDiagRec(m_Type, m_h, iRecord, szSqlState, pfNativeError, szErrorMsg, cchErrorMsgMax, pcchErrorMsg);
 		}
 
-		void GetDiagRecords(_Out_ std::vector<String>& records)
+		void GetDiagRecords(_Out_ std::vector<String>& records) const
 		{
 			//clear the vector
 			records.clear();
@@ -609,29 +611,27 @@ namespace CODBC
 			}
 		}
 
-		__if_exists(SQLCompleteAsync)
+#if (ODBCVER >= 0x0380)
+		SQLRETURN CancelHandle() noexcept
 		{
-			SQLRETURN CancelHandle() noexcept
-			{
-				//Validate our parameters
+			//Validate our parameters
 #pragma warning(suppress: 26477)
-				ATLASSERT(m_h != SQL_NULL_HANDLE);
+			ATLASSERT(m_h != SQL_NULL_HANDLE);
 
-				return SQLCancelHandle(m_Type, m_h);
-			}
-		} //__if_exists(SQLCompleteAsync)
+			return SQLCancelHandle(m_Type, m_h);
+		}
+#endif //#if (ODBCVER >= 0x0380)
 
-		__if_exists(SQLCompleteAsync)
+#if (ODBCVER >= 0x0380)
+		SQLRETURN CompleteAsync(_Out_ RETCODE* AsyncRetCodePtr) noexcept
 		{
-			SQLRETURN CompleteAsync(_Out_ RETCODE* AsyncRetCodePtr) noexcept
-			{
-				//Validate our parameters
+			//Validate our parameters
 #pragma warning(suppress: 26477)
-				ATLASSERT(m_h != SQL_NULL_HANDLE);
+			ATLASSERT(m_h != SQL_NULL_HANDLE);
 
-				return SQLCompleteAsync(m_Type, m_h, AsyncRetCodePtr);
-			}
-		} //__if_exists(SQLCompleteAsync)
+			return SQLCompleteAsync(m_Type, m_h, AsyncRetCodePtr);
+		}
+#endif //#if (ODBCVER >= 0x0380)
 
 #pragma warning(suppress: 26440)
 		void ValidateReturnValue(_In_ SQLRETURN nRet) const
@@ -1883,7 +1883,56 @@ namespace CODBC
 	};
 
 
-	//The base class which accessor classes derive from. T is the class that contains the data that will be accessed
+#ifdef _ATL_MODULES
+
+	template<typename, typename T>
+	struct _Has_GetBindParametersEntries
+	{
+		static_assert(std::integral_constant<T, false>::value, "Second template parameter needs to be of function type.");
+	};
+
+	template<typename C, typename Ret, typename... Args>
+	struct _Has_GetBindParametersEntries<C, Ret(Args...)>
+	{
+	private:
+		template<typename T>
+		static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>()._GetBindParametersEntries(std::declval<Args>()...)), Ret>::type;
+
+		template<typename>
+		static constexpr std::false_type check(...);
+
+		using type = decltype(check<C>(nullptr));
+
+	public:
+		static constexpr bool value = type::value;
+	};
+
+	template<typename, typename T>
+	struct _Has_GetBindColumnEntries
+	{
+		static_assert(std::integral_constant<T, false>::value, "Second template parameter needs to be of function type.");
+	};
+
+	template<typename C, typename Ret, typename... Args>
+	struct _Has_GetBindColumnEntries<C, Ret(Args...)>
+	{
+	private:
+		template<typename T>
+		static constexpr auto check(T*) -> typename std::is_same<decltype(std::declval<T>()._GetBindColumnEntries(std::declval<Args>()...)), Ret>::type;
+
+		template<typename>
+		static constexpr std::false_type check(...);
+
+		using type = decltype(check<C>(nullptr));
+
+	public:
+		static constexpr bool value = type::value;
+	};
+
+#endif //#ifdef _ATL_MODULES
+
+
+	//The base class which accessor classes derive from. T is the class that contains the data that will be accessed.
 	template<class T>
 	class CAccessor : public T
 	{
@@ -1898,7 +1947,11 @@ namespace CODBC
 #pragma warning(suppress: 26496)
 			SQLRETURN nRet{ SQL_SUCCESS };
 
+#ifdef _ATL_MODULES
+			if constexpr (_Has_GetBindColumnEntries<T, SQLRETURN(const CODBC::CStatement*, int*, std::vector<SQLLEN>*)>::value)
+#else
 			__if_exists(T::_GetBindColumnEntries)
+#endif //#ifdef _ATL_MODULES
 			{
 				//Work out the number of bound columns we have
 				int nColumns{ 0 };
@@ -1916,7 +1969,7 @@ namespace CODBC
 			return nRet;
 		}
 
-#pragma warning(suppress: 26434)
+#pragma warning(suppress: 26434 26440 26460)
 		SQLRETURN BindParameters(_In_ CStatement& statement)
 		{
 			UNREFERENCED_PARAMETER(statement);
@@ -1924,7 +1977,11 @@ namespace CODBC
 			//What will be the return value from this method
 			SQLRETURN nRet{ SQL_SUCCESS };
 
+#ifdef _ATL_MODULES
+			if constexpr (_Has_GetBindParametersEntries<T, SQLRETURN(CODBC::CStatement*, int*, std::vector<SQLLEN>*)>::value)
+#else
 			__if_exists(T::_GetBindParametersEntries)
+#endif //#ifdef _ATL_MODULES
 			{
 				//Work out the number of bound parameters we have
 				int nColumns{ 0 };
@@ -2136,32 +2193,32 @@ namespace CODBC
 			return nRet;
 		}
 
-		_NODISCARD String GetColumnName(_In_ SQLSMALLINT nColumn) const
+		[[nodiscard]] String GetColumnName(_In_ SQLSMALLINT nColumn) const
 		{
 			return this->m_ColumnNames[nColumn - 1]; //nColumn is 1 based
 		}
 
-		_NODISCARD SQLSMALLINT GetColumnType(_In_ SQLSMALLINT nColumn) const
+		[[nodiscard]] SQLSMALLINT GetColumnType(_In_ SQLSMALLINT nColumn) const
 		{
 			return this->m_ColumnDataTypes[nColumn - 1]; //nColumn is 1 based
 		}
 
-		_NODISCARD SQLULEN GetColumnSize(_In_ SQLSMALLINT nColumn) const
+		[[nodiscard]] SQLULEN GetColumnSize(_In_ SQLSMALLINT nColumn) const
 		{
 			return this->m_ColumnSizes[nColumn - 1]; //nColumn is 1 based
 		}
 
-		_NODISCARD SQLSMALLINT GetColumnDecimalDigits(_In_ SQLSMALLINT nColumn) const
+		[[nodiscard]] SQLSMALLINT GetColumnDecimalDigits(_In_ SQLSMALLINT nColumn) const
 		{
 			return this->m_ColumnDecimalDigits[nColumn - 1]; //nColumn is 1 based
 		}
 
-		_NODISCARD SQLSMALLINT GetColumnNullables(_In_ SQLSMALLINT nColumn) const
+		[[nodiscard]] SQLSMALLINT GetColumnNullables(_In_ SQLSMALLINT nColumn) const
 		{
 			return this->m_ColumnNullables[nColumn - 1]; //nColumn is 1 based
 		}
 
-		_NODISCARD SQLSMALLINT GetColumnNo(_In_z_ LPCTSTR pszColumnName) const
+		[[nodiscard]] SQLSMALLINT GetColumnNo(_In_z_ LPCTSTR pszColumnName) const
 		{
 #pragma warning(suppress: 26489)
 			const auto iter{ std::find_if(this->m_ColumnNames.begin(), this->m_ColumnNames.end(), [pszColumnName](const String& element)
