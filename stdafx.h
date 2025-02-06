@@ -1,4 +1,4 @@
-/* Copyright (C) 2022-2024 Stefan-Mihai MOGA
+/* Copyright (C) 2022-2025 Stefan-Mihai MOGA
 This file is part of WebSearchEngine application developed by Stefan-Mihai MOGA.
 
 WebSearchEngine is free software: you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <filesystem>
 
 #define REGKEY_SECTION _T("Settings")
 #define REGKEY_DBTYPE _T("dbtype")
@@ -100,6 +101,6 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #define ODBC_CHECK_RETURN_FALSE(nRet, handle) \
 	handle.ValidateReturnValue(nRet); \
 	if (!SQL_SUCCEEDED(nRet)) \
-  { \
-  return false; \
-  }
+{ \
+	return false; \
+}
