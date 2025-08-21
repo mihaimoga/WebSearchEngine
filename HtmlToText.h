@@ -76,8 +76,8 @@ public:
 protected:
 	std::string _text;
 	std::string _html;
-	size_t _pos;
-	bool _preformatted;
+	size_t _pos = 0;
+	bool _preformatted = false;
 
 	CMapStringToString _tags;
 	CStringList _ignoreTags;

@@ -413,7 +413,7 @@ BOOL WaitWithMessageLoop(HANDLE hEvent, DWORD dwTimeout)
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-			if (WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0)
+			if (hEvent && (WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0))
 				return TRUE;
 		}
 	}

@@ -62,7 +62,8 @@ bool GetRegistryPassword(LPCTSTR lpszCryptoKey, LPCTSTR lpszSection, LPCTSTR lps
 
 	if (!USE_CRYPTO_METHODS)
 	{
-		return (_tcscpy(lpszValue, AfxGetApp()->GetProfileString(lpszSection, lpszEntry, lpszDefault)) != NULL);
+		_tcscpy(lpszValue, AfxGetApp()->GetProfileString(lpszSection, lpszEntry, lpszDefault));
+		return true;
 	}
 
 	if (!lpszCryptoKey)

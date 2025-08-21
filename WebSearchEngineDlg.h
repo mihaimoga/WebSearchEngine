@@ -47,9 +47,9 @@ public:
 	CODBC::CEnvironment m_pEnvironment;
 	CODBC::CConnection m_pConnection;
 	CODBC::String m_sConnectionOutString;
-	TCHAR m_sConnectionInString[0x100];
-	DWORD m_nThreadID;
-	HANDLE m_hThread;
+	TCHAR m_sConnectionInString[0x100] = { 0, };
+	DWORD m_nThreadID = 0;
+	HANDLE m_hThread = nullptr;
 
 protected:
 	// Generated message map functions
