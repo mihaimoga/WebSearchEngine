@@ -1,29 +1,76 @@
 ![WebSearchEngine.png](WebSearchEngine.png)
 
-A [search engine](https://www.text-mining.ro/) is a software system that is designed to carry out web searches. They search the World Wide Web in a systematic way for particular information specified in a textual web search query. The search results are generally presented in a line of results, often referred to as search engine results pages (SERPs) The information may be a mix of links to web pages, images, videos, infographics, articles, research papers, and other types of files. Some search engines also mine data available in databases or open directories. Unlike web directories, which are maintained only by human editors, search engines also maintain real-time information by running an algorithm on a web crawler. Internet content that is not capable of being searched by a web search engine is generally described as the deep web.
+# WebSearchEngine
 
-A search engine maintains the following processes in near real time:
-1. Web crawling
-2. Indexing
-3. Searching
+This project demonstrates the design and implementation of a basic **Web Search Engine**, showcasing key components such as web crawling, indexing, and query processing.
 
-Web search engines get their information by web crawling from site to site. The "spider" checks for the standard filename robots.txt, addressed to it. The robots.txt file contains directives for search spiders, telling it which pages to crawl and which pages not to crawl. After checking for robots.txt and either finding it or not, the spider sends certain information back to be indexed depending on many factors, such as the titles, page content, JavaScript, Cascading Style Sheets (CSS), headings, or its metadata in HTML meta tags. After a certain number of pages crawled, amount of data indexed, or time spent on the website, the spider stops crawling and moves on. "[N]o web crawler may actually crawl the entire reachable web. Due to infinite websites, spider traps, spam, and other exigencies of the real web, crawlers instead apply a crawl policy to determine when the crawling of a site should be deemed sufficient. Some websites are crawled exhaustively, while others are crawled only partially".
+## Overview
 
-Indexing means associating words and other definable tokens found on web pages to their domain names and HTML-based fields. The associations are made in a public database, made available for web search queries. A query from a user can be a single word, multiple words or a sentence. The index helps find information relating to the query as quickly as possible. Some of the techniques for indexing, and caching are trade secrets, whereas web crawling is a straightforward process of visiting all sites on a systematic basis.
+The search engine operates by crawling websites, parsing their content, and indexing relevant information for efficient retrieval. It respects the `robots.txt` protocol and extracts metadata such as:
 
-Between visits by the spider, the cached version of the page (some or all the content needed to render it) stored in the search engine working memory is quickly sent to an inquirer. If a visit is overdue, the search engine can just act as a web proxy instead. In this case, the page may differ from the search terms indexed. The cached page holds the appearance of the version whose words were previously indexed, so a cached version of a page can be useful to the website when the actual page has been lost, but this problem is also considered a mild form of linkrot.
+- Page titles
+- HTML content
+- JavaScript and CSS
+- Headings
+- Meta tags
 
-Typically when a user enters a query into a search engine it is a few keywords. The index already has the names of the sites containing the keywords, and these are instantly obtained from the index. The real processing load is in generating the web pages that are the search results list: Every page in the entire list must be weighted according to information in the indexes. Then the top search result item requires the lookup, reconstruction, and markup of the snippets showing the context of the keywords matched. These are only part of the processing each search results web page requires, and further pages (next to the top) require more of this post-processing.
+## Features
 
-Beyond simple keyword lookups, search engines offer their own GUI- or command-driven operators and search parameters to refine the search results. These provide the necessary controls for the user engaged in the feedback loop users create by filtering and weighting while refining the search results, given the initial pages of the first search results. For example, from 2007 the Google.com search engine has allowed one to filter by date by clicking "Show search tools" in the leftmost column of the initial search results page, and then selecting the desired date range. It's also possible to weight by date because each page has a modification time. Most search engines support the use of the boolean operators AND, OR and NOT to help end users refine the search query. Boolean operators are for literal searches that allow the user to refine and extend the terms of the search. The engine looks for the words or phrases exactly as entered. Some search engines provide an advanced feature called proximity search, which allows users to define the distance between keywords. There is also concept-based searching where the research involves using statistical analysis on pages containing the words or phrases you search for.
+- **Web Crawler**: Navigates through websites, obeying `robots.txt` directives.
+- **Indexer**: Processes and stores page content for fast lookup.
+- **Query Processor**: Handles user queries and retrieves relevant results.
+- **Metadata Extraction**: Captures structured data from HTML for improved relevance.
 
-The usefulness of a search engine depends on the relevance of the result set it gives back. While there may be millions of web pages that include a particular word or phrase, some pages may be more relevant, popular, or authoritative than others. Most search engines employ methods to rank the results to provide the "best" results first. How a search engine decides which pages are the best matches, and what order the results should be shown in, varies widely from one engine to another. The methods also change over time as Internet usage changes and new techniques evolve. There are two main types of search engine that have evolved: one is a system of predefined and hierarchically ordered keywords that humans have programmed extensively. The other is a system that generates an "inverted index" by analyzing texts it locates. This first form relies much more heavily on the computer itself to do the bulk of the work.
+## How It Works
 
-Most Web search engines are commercial ventures supported by advertising revenue and thus some of them allow advertisers to have their listings ranked higher in search results for a fee. Search engines that do not accept money for their search results make money by running search related ads alongside the regular search engine results. The search engines make money every time someone clicks on one of these ads.
+### 1. Web Crawling
+The engine starts by crawling web pages:
+- Downloads HTML content from URLs.
+- Follows links to discover new pages.
+- Respects `robots.txt` rules to avoid restricted areas.
 
-# Setup of this application
+It extracts:
+- Page titles
+- Headings (`<h1>`, `<h2>`, etc.)
+- Meta tags
+- JavaScript and CSS references
+- Raw HTML content
 
-- Install  [MySQL ODBC connector](https://dev.mysql.com/downloads/connector/odbc/);
-- Choose a MySQL hosting service and create the MySQL database;
-- Configure ODBC connection on application start-up:
-![WebSearchEngine-MySQL.png](WebSearchEngine-MySQL.png).
+### 2. Indexing
+After crawling, the engine processes and stores content in an index:
+- **Tokenization**: Breaks text into searchable words.
+- **Normalization**: Lowercases text, removes punctuation, etc.
+- **Metadata Storage**: Links each word to the page(s) it appears in, with frequency and position.
+
+### 3. Query Processing
+When a user enters a search query:
+- Parses the query.
+- Looks up relevant terms in the index.
+- Ranks pages based on relevance (e.g., term frequency, metadata match).
+- Returns results with titles, snippets, and links.
+
+## Technologies Used
+
+- **C++** for core engine logic
+- **HTML/CSS/JavaScript** for front-end interface
+- **Custom Semaphores** for concurrency control
+
+## Getting Started
+
+To run the project locally:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mihaimoga/WebSearchEngine.git
+   ```
+2. Build the project using your preferred C++ compiler or IDE.
+3. Launch the crawler and indexer modules.
+4. Use the front-end interface to perform search queries.
+
+## Demo
+
+Visit [`text-mining.ro`](https://text-mining.ro/) for a live demonstration.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the LICENSE file for details.
