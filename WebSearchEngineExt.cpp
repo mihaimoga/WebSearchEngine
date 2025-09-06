@@ -12,6 +12,12 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 You should have received a copy of the GNU General Public License along with
 WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 
+/**
+ * @file WebSearchEngineExt.cpp
+ * @brief Implements core logic for URL frontier management, HTML processing, and database interaction
+ *        for the WebSearchEngine application.
+ */
+
 #include "stdafx.h"
 #include "WebSearchEngineExt.h"
 #include "HtmlToText.h"
@@ -33,37 +39,56 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #define new DEBUG_NEW
 #endif
 
-FrontierArray gFrontierOlder; // visited URLs
-FrontierArray gFrontierArray; // enque/deque URLs
-FrontierScore gFrontierScore; // the score of each URL
-WebpageIndex gWebpageID; // map of each webpage ID
-KeywordIndex gKeywordID; // map of each keyword ID
-KeywordArray gWordArray; // list of all keywords
+ // Global data structures for URL and keyword management
+FrontierArray gFrontierOlder;   ///< List of already visited URLs
+FrontierArray gFrontierArray;   ///< Queue of URLs to visit
+FrontierScore gFrontierScore;   ///< Score (priority) for each URL in the frontier
+WebpageIndex gWebpageID;        ///< Mapping from webpage URL to unique ID
+KeywordIndex gKeywordID;        ///< Mapping from keyword to unique ID
+KeywordArray gWordArray;        ///< List of all discovered keywords
 
-std::vector<std::wstring> gDataMiningTerms;
+std::vector<std::wstring> gDataMiningTerms; ///< Terms to be used for data mining
 
-static __int64 gCurrentWebpageID = 0;
-static __int64 gCurrentKeywordID = 0;
+static __int64 gCurrentWebpageID = 0; ///< Counter for assigning unique webpage IDs
+static __int64 gCurrentKeywordID = 0; ///< Counter for assigning unique keyword IDs
 
 #define DELIMITERS _T("\t\n\r\"\' !?#$%&|(){}[]*/+-:;<>=.,")
 
+/**
+ * @brief Removes HTML quotes from a string.
+ * @param InBuffer The input string.
+ * @return The unquoted string.
+ */
 const std::string UnquoteHTML(const std::string& InBuffer);
 
-// convert UTF-8 string to wstring
+/**
+ * @brief Converts a UTF-8 encoded std::string to std::wstring.
+ * @param str The UTF-8 string.
+ * @return The corresponding wide string.
+ */
 std::wstring utf8_to_wstring(const std::string& str)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
 	return myconv.from_bytes(str);
 }
 
-// convert wstring to UTF-8 string
+/**
+ * @brief Converts a std::wstring to a UTF-8 encoded std::string.
+ * @param str The wide string.
+ * @return The corresponding UTF-8 string.
+ */
 std::string wstring_to_utf8(const std::wstring& str)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
 	return myconv.to_bytes(str);
 }
 
-// adds a new URL to frontier
+/**
+ * @brief Adds a new URL to the frontier if it has not been visited or queued.
+ *        Increases the score if already in the queue.
+ * @param lpszURL The URL to add.
+ * @return true if the operation succeeded.
+ */
 bool AddURLToFrontier(const std::string& lpszURL)
 {
 	bool found = false;
@@ -91,7 +116,12 @@ bool AddURLToFrontier(const std::string& lpszURL)
 	return true;
 }
 
-// gets the next URL from frontier
+/**
+ * @brief Extracts the next URL from the frontier, prioritizing by score.
+ *        Removes the URL from the queue and score map, and adds it to the visited list.
+ * @param[out] lpszURL The extracted URL.
+ * @return true if a URL was extracted, false if the frontier is empty.
+ */
 bool ExtractURLFromFrontier(std::string& lpszURL)
 {
 	lpszURL = "";
@@ -107,7 +137,7 @@ bool ExtractURLFromFrontier(std::string& lpszURL)
 			}
 			else
 			{
-				if (score < gFrontierScore[it]) // update the selection if necesary
+				if (score < gFrontierScore[it]) // update the selection if necessary
 				{
 					lpszURL = it;
 					score = gFrontierScore[it];
@@ -139,7 +169,12 @@ bool ExtractURLFromFrontier(std::string& lpszURL)
 	return false;
 }
 
-// function to download a Web page
+/**
+ * @brief Downloads a web page from a URL and saves it to a temporary file.
+ * @param lpszURL The URL to download.
+ * @param[out] lpszFilename The path to the downloaded file.
+ * @return true if the download succeeded, false otherwise.
+ */
 bool DownloadURLToFile(const std::string& lpszURL, std::string& lpszFilename)
 {
 	char lpszTempPath[MAX_PATH + 1] = { 0, };
@@ -161,7 +196,13 @@ bool DownloadURLToFile(const std::string& lpszURL, std::string& lpszFilename)
 	return false;
 }
 
-// finds and replaces all occurences from a given string
+/**
+ * @brief Finds and replaces all occurrences of a substring in a string.
+ * @param data The string to modify.
+ * @param toSearch The substring to search for.
+ * @param replaceStr The replacement string.
+ * @return The number of replacements made.
+ */
 int findAndReplaceAll(std::wstring& data, std::wstring toSearch, std::wstring replaceStr)
 {
 	int counter = 0;
@@ -180,29 +221,45 @@ int findAndReplaceAll(std::wstring& data, std::wstring toSearch, std::wstring re
 	return counter;
 }
 
-// trim from start (in place)
+/**
+ * @brief Trims whitespace from the start of a string.
+ * @param s The string to trim.
+ * @return The trimmed string.
+ */
 static inline std::wstring ltrim(std::wstring s) {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
 		return !iswspace((wint_t)ch);
-	}));
+		}));
 	return s;
 }
 
-// trim from end (in place)
+/**
+ * @brief Trims whitespace from the end of a string.
+ * @param s The string to trim.
+ * @return The trimmed string.
+ */
 static inline std::wstring rtrim(std::wstring s) {
 	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
 		return !iswspace((wint_t)ch);
-	}).base(), s.end());
+		}).base(), s.end());
 	return s;
 }
 
-// trim from both ends (in place)
+/**
+ * @brief Trims whitespace from both ends of a string.
+ * @param s The string to trim.
+ * @return The trimmed string.
+ */
 static inline std::wstring trim(std::wstring s)
 {
 	return ltrim(rtrim(s));
 }
 
-// string to lower
+/**
+ * @brief Converts a string to lowercase.
+ * @param s The string to convert.
+ * @return The lowercase string.
+ */
 static inline std::wstring to_lower(std::wstring s)
 {
 	std::transform(s.begin(), s.end(), s.begin(),
@@ -210,7 +267,11 @@ static inline std::wstring to_lower(std::wstring s)
 	return s;
 }
 
-// string to upper
+/**
+ * @brief Converts a string to uppercase.
+ * @param s The string to convert.
+ * @return The uppercase string.
+ */
 static inline std::wstring to_upper(std::wstring s)
 {
 	std::transform(s.begin(), s.end(), s.begin(),
@@ -218,7 +279,14 @@ static inline std::wstring to_upper(std::wstring s)
 	return s;
 }
 
-// process HTML page and extract plain text and hyperlinks
+/**
+ * @brief Processes an HTML file: extracts the title, hyperlinks, and plain text,
+ *        updates the database with webpage and keyword information, and manages data mining terms.
+ * @param pWebSearchEngineDlg Pointer to the main dialog for UI and database access.
+ * @param lpszFilename Path to the HTML file to process.
+ * @param lpszURL The URL of the processed page.
+ * @return true if processing succeeded, false otherwise.
+ */
 bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lpszFilename, const std::string& lpszURL)
 {
 	CString strMessage;

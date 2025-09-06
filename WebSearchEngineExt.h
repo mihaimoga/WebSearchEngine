@@ -12,6 +12,12 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 You should have received a copy of the GNU General Public License along with
 WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 
+/**
+ * @file WebSearchEngineExt.h
+ * @brief Declarations for URL frontier management, HTML processing, and database accessors
+ *        for the WebSearchEngine application.
+ */
+
 #ifndef __WEBSEARCHENGINE_H__
 #define __WEBSEARCHENGINE_H__
 
@@ -21,47 +27,84 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #include "ODBCWrappers.h"
 #include "WebSearchEngineDlg.h"
 
-typedef std::vector<std::string> FrontierArray;
-typedef std::map<std::string, int> FrontierScore;
-typedef std::map<std::wstring, __int64> WebpageIndex;
-typedef std::map<std::wstring, __int64> KeywordIndex;
-typedef std::vector<std::wstring> KeywordArray;
+ // Type aliases for core data structures used in the search engine
+typedef std::vector<std::string> FrontierArray;           ///< List of URLs (frontier)
+typedef std::map<std::string, int> FrontierScore;         ///< URL to score mapping
+typedef std::map<std::wstring, __int64> WebpageIndex;     ///< Webpage URL to ID mapping
+typedef std::map<std::wstring, __int64> KeywordIndex;     ///< Keyword to ID mapping
+typedef std::vector<std::wstring> KeywordArray;           ///< List of keywords
 
+/**
+ * @brief Adds a new URL to the frontier if not already visited or present.
+ * @param lpszURL The URL to add.
+ * @return true if added or already present, false on error.
+ */
 bool AddURLToFrontier(const std::string& lpszURL);
+
+/**
+ * @brief Extracts the next URL from the frontier, prioritizing by score.
+ * @param[out] lpszURL The extracted URL.
+ * @return true if a URL was extracted, false if the frontier is empty.
+ */
 bool ExtractURLFromFrontier(std::string& lpszURL);
+
+/**
+ * @brief Downloads a web page from a URL and saves it to a temporary file.
+ * @param lpszURL The URL to download.
+ * @param[out] lpszFilename The path to the downloaded file.
+ * @return true if the download succeeded, false otherwise.
+ */
 bool DownloadURLToFile(const std::string& lpszURL, std::string& lpszFilename);
+
+/**
+ * @brief Processes an HTML file: extracts title, hyperlinks, and plain text,
+ *        updates the database with webpage and keyword information.
+ * @param pWebSearchEngineDlg Pointer to the main dialog for UI and database access.
+ * @param lpszFilename Path to the HTML file to process.
+ * @param lpszURL The URL of the processed page.
+ * @return true if processing succeeded, false otherwise.
+ */
 bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lpszFilename, const std::string& lpszURL);
 
-class CGenericStatement // execute one SQL statement; no output returned
+/**
+ * @class CGenericStatement
+ * @brief Executes a single SQL statement with no output.
+ */
+class CGenericStatement
 {
 public:
-	// Methods
+	/**
+	 * @brief Executes a SQL statement.
+	 * @param pDbConnect Database connection.
+	 * @param lpszSQL SQL statement to execute.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, LPCTSTR lpszSQL)
 	{
-		// Create the statement object
+		// Implementation in header for simplicity
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
-#pragma warning(suppress: 26465 26490 26492)
 		nRet = statement.Prepare(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(lpszSQL)));
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
 };
 
-class CWebpageInsertAccessor // sets the data for inserting one row intro WEBPAGE table
+/**
+ * @class CWebpageInsertAccessor
+ * @brief Accessor for inserting a row into the WEBPAGE table.
+ */
+class CWebpageInsertAccessor
 {
 public:
-	// Parameter values
-	TCHAR m_lpszURL[MAX_URL_LENGTH];
-	TCHAR m_lpszTitle[0x100];
-	TCHAR m_lpszContent[0x10000];
+	TCHAR m_lpszURL[MAX_URL_LENGTH];      ///< Webpage URL
+	TCHAR m_lpszTitle[0x100];             ///< Webpage title
+	TCHAR m_lpszContent[0x10000];         ///< Webpage content
 
 #pragma warning(suppress: 26429)
 	BEGIN_ODBC_PARAM_MAP(CWebpageInsertAccessor)
@@ -74,31 +117,40 @@ public:
 
 	DEFINE_ODBC_COMMAND(CWebpageInsertAccessor, _T("INSERT INTO `webpage` (`url`, `title`, `content`) VALUES (?, ?, ?);"))
 
-		// You may wish to call this function if you are inserting a record and wish to
-		// initialize all the fields, if you are not going to explicitly set all of them.
+		/**
+		 * @brief Clears all fields in the record.
+		 */
 		void ClearRecord() noexcept
 	{
 		memset(this, 0, sizeof(*this));
 	}
 };
 
-class CWebpageInsert : public CODBC::CAccessor<CWebpageInsertAccessor> // execute INSERT statement for WEBPAGE table; no output returned
+/**
+ * @class CWebpageInsert
+ * @brief Executes an INSERT statement for the WEBPAGE table.
+ */
+class CWebpageInsert : public CODBC::CAccessor<CWebpageInsertAccessor>
 {
 public:
-	// Methods
+	/**
+	 * @brief Inserts a webpage record into the database.
+	 * @param pDbConnect Database connection.
+	 * @param pURL Webpage URL.
+	 * @param pTitle Webpage title.
+	 * @param pContent Webpage content.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pURL, const std::wstring& pTitle, const std::wstring& pContent)
 	{
 		ClearRecord();
-		// Create the statement object
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
 		nRet = statement.Prepare(GetDefaultCommand());
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Bind the parameters
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszURL, _countof(m_lpszURL), pURL.c_str());
 		_tcscpy_s(m_lpszTitle, _countof(m_lpszTitle), pTitle.c_str());
@@ -106,18 +158,20 @@ public:
 		nRet = BindParameters(statement);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
 };
 
-class CKeywordInsertAccessor // sets the data for inserting one row intro KEYWORD table
+/**
+ * @class CKeywordInsertAccessor
+ * @brief Accessor for inserting a row into the KEYWORD table.
+ */
+class CKeywordInsertAccessor
 {
 public:
-	// Parameter values
-	TCHAR m_lpszName[0x100];
+	TCHAR m_lpszName[0x100]; ///< Keyword name
 
 #pragma warning(suppress: 26429)
 	BEGIN_ODBC_PARAM_MAP(CKeywordInsertAccessor)
@@ -128,51 +182,57 @@ public:
 
 	DEFINE_ODBC_COMMAND(CKeywordInsertAccessor, _T("INSERT INTO `keyword` (`name`) VALUES (?);"))
 
-		// You may wish to call this function if you are inserting a record and wish to
-		// initialize all the fields, if you are not going to explicitly set all of them.
 		void ClearRecord() noexcept
 	{
 		memset(this, 0, sizeof(*this));
 	}
 };
 
-class CKeywordInsert : public CODBC::CAccessor<CKeywordInsertAccessor> // execute INSERT statement for KEYWORD table; no output returned
+/**
+ * @class CKeywordInsert
+ * @brief Executes an INSERT statement for the KEYWORD table.
+ */
+class CKeywordInsert : public CODBC::CAccessor<CKeywordInsertAccessor>
 {
 public:
-	// Methods
+	/**
+	 * @brief Inserts a keyword record into the database.
+	 * @param pDbConnect Database connection.
+	 * @param pKeyword Keyword to insert.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
 		ClearRecord();
-		// Create the statement object
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
 		nRet = statement.Prepare(GetDefaultCommand());
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Bind the parameters
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszName, _countof(m_lpszName), pKeyword.c_str());
 		nRet = BindParameters(statement);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
 };
 
-class COccurrenceInsertAccessor // sets the data for inserting one row intro OCCURRENCE table
+/**
+ * @class COccurrenceInsertAccessor
+ * @brief Accessor for inserting a row into the OCCURRENCE table.
+ */
+class COccurrenceInsertAccessor
 {
 public:
-	// Parameter values
-	__int64 m_nWebpageID;
-	__int64 m_nKeywordID;
-	__int64 m_nCounter;
-	double m_rPageRank;
+	__int64 m_nWebpageID; ///< Webpage ID
+	__int64 m_nKeywordID; ///< Keyword ID
+	__int64 m_nCounter;   ///< Occurrence count
+	double m_rPageRank;   ///< PageRank value
 
 #pragma warning(suppress: 26429)
 	BEGIN_ODBC_PARAM_MAP(COccurrenceInsertAccessor)
@@ -186,31 +246,37 @@ public:
 
 	DEFINE_ODBC_COMMAND(COccurrenceInsertAccessor, _T("INSERT INTO `occurrence` (`webpage_id`, `keyword_id`, `counter`, `pagerank`) VALUES (?, ?, ?, ?);"))
 
-		// You may wish to call this function if you are inserting a record and wish to
-		// initialize all the fields, if you are not going to explicitly set all of them.
 		void ClearRecord() noexcept
 	{
 		memset(this, 0, sizeof(*this));
 	}
 };
 
-class COccurrenceInsert : public CODBC::CAccessor<COccurrenceInsertAccessor> // execute INSERT statement for OCCURRENCE table; no output returned
+/**
+ * @class COccurrenceInsert
+ * @brief Executes an INSERT statement for the OCCURRENCE table.
+ */
+class COccurrenceInsert : public CODBC::CAccessor<COccurrenceInsertAccessor>
 {
 public:
-	// Methods
+	/**
+	 * @brief Inserts an occurrence record into the database.
+	 * @param pDbConnect Database connection.
+	 * @param nWebpageID Webpage ID.
+	 * @param nKeywordID Keyword ID.
+	 * @param nCounter Occurrence count.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID, const __int64& nCounter)
 	{
 		ClearRecord();
-		// Create the statement object
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
 		nRet = statement.Prepare(GetDefaultCommand());
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Bind the parameters
 #pragma warning(suppress: 26485)
 		m_nWebpageID = nWebpageID;
 		m_nKeywordID = nKeywordID;
@@ -219,19 +285,21 @@ public:
 		nRet = BindParameters(statement);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
 };
 
-class COccurrenceUpdateAccessor // sets the data for updating one row intro OCCURRENCE table
+/**
+ * @class COccurrenceUpdateAccessor
+ * @brief Accessor for updating a row in the OCCURRENCE table.
+ */
+class COccurrenceUpdateAccessor
 {
 public:
-	// Parameter values
-	__int64 m_nWebpageID;
-	__int64 m_nKeywordID;
+	__int64 m_nWebpageID; ///< Webpage ID
+	__int64 m_nKeywordID; ///< Keyword ID
 
 #pragma warning(suppress: 26429)
 	BEGIN_ODBC_PARAM_MAP(COccurrenceUpdateAccessor)
@@ -243,49 +311,56 @@ public:
 
 	DEFINE_ODBC_COMMAND(COccurrenceUpdateAccessor, _T("UPDATE `occurrence` SET `counter` = `counter` + 1 WHERE `webpage_id` = ? AND `keyword_id` = ?;"))
 
-		// You may wish to call this function if you are inserting a record and wish to
-		// initialize all the fields, if you are not going to explicitly set all of them.
 		void ClearRecord() noexcept
 	{
 		memset(this, 0, sizeof(*this));
 	}
 };
 
-class COccurrenceUpdate : public CODBC::CAccessor<COccurrenceUpdateAccessor> // execute UPDATE statement for OCCURRENCE table; no output returned
+/**
+ * @class COccurrenceUpdate
+ * @brief Executes an UPDATE statement for the OCCURRENCE table.
+ */
+class COccurrenceUpdate : public CODBC::CAccessor<COccurrenceUpdateAccessor>
 {
 public:
-	// Methods
+	/**
+	 * @brief Updates the occurrence counter for a webpage-keyword pair.
+	 * @param pDbConnect Database connection.
+	 * @param nWebpageID Webpage ID.
+	 * @param nKeywordID Keyword ID.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID)
 	{
 		ClearRecord();
-		// Create the statement object
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
 		nRet = statement.Prepare(GetDefaultCommand());
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Bind the parameters
 #pragma warning(suppress: 26485)
 		m_nWebpageID = nWebpageID;
 		m_nKeywordID = nKeywordID;
 		nRet = BindParameters(statement);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
 };
 
-class CDataMiningUpdateAccessor // applying Data Mining
+/**
+ * @class CDataMiningUpdateAccessor
+ * @brief Accessor for applying data mining updates to the OCCURRENCE table.
+ */
+class CDataMiningUpdateAccessor
 {
 public:
-	// Parameter values
-	TCHAR m_lpszName[0x100];
+	TCHAR m_lpszName[0x100]; ///< Keyword name
 
 #pragma warning(suppress: 26429)
 	BEGIN_ODBC_PARAM_MAP(CDataMiningUpdateAccessor)
@@ -296,37 +371,40 @@ public:
 
 	DEFINE_ODBC_COMMAND(CDataMiningUpdateAccessor, _T("UPDATE `occurrence` INNER JOIN `keyword` USING(`keyword_id`) SET `pagerank` = data_mining(`webpage_id`, `name`) WHERE `name` = ?;"))
 
-		// You may wish to call this function if you are inserting a record and wish to
-		// initialize all the fields, if you are not going to explicitly set all of them.
 		void ClearRecord() noexcept
 	{
 		memset(this, 0, sizeof(*this));
 	}
 };
 
-class CDataMiningUpdate : public CODBC::CAccessor<CDataMiningUpdateAccessor> // execute UPDATE statement for Data Mining; no output returned
+/**
+ * @class CDataMiningUpdate
+ * @brief Executes a data mining UPDATE statement for the OCCURRENCE table.
+ */
+class CDataMiningUpdate : public CODBC::CAccessor<CDataMiningUpdateAccessor>
 {
 public:
-	// Methods
+	/**
+	 * @brief Applies data mining update for a given keyword.
+	 * @param pDbConnect Database connection.
+	 * @param pKeyword Keyword to update.
+	 * @return true if successful, false otherwise.
+	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
 		ClearRecord();
-		// Create the statement object
 		CODBC::CStatement statement;
 		SQLRETURN nRet = statement.Create(pDbConnect);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Prepare the statement
 		nRet = statement.Prepare(GetDefaultCommand());
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Bind the parameters
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszName, _countof(m_lpszName), pKeyword.c_str());
 		nRet = BindParameters(statement);
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		// Execute the statement
 		nRet = statement.Execute();
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
