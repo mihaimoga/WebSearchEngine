@@ -229,10 +229,12 @@
     <ResourceCompile Include="WebSearchEngine.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ReleaseNotes.html" />
     <None Include="res\WebSearchEngine.rc2" />
     <None Include="index.html" />
     <None Include="search.php" />
     <None Include="search.sql" />
+    <None Include="SoftwareContentRegister.html" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico" />

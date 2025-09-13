@@ -99,6 +99,8 @@
     <None Include="search.sql">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="ReleaseNotes.html" />
+    <None Include="SoftwareContentRegister.html" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico">
