@@ -78,7 +78,7 @@ History: PJN / 24-09-2011 1. Initial creation
          PJN / 03-07-2021 1. Added support for date and time datatypes: TIME_STRUCT / SQL_TYPE_TIME & 
                           DATE_STRUCT / SQL_TYPE_DATE. Thanks to Serhiy Pavlov for providing this nice addition.
                           2. Updated copyright details.
-         PJN / 04-03-2022 1. Updated copyright details
+         PJN / 04-03-2022 1. Updated copyright details.
                           2. Updated the code to use C++ uniform initialization for all variable declarations.
                           3. Updated the code to use std::[w]string::data method throughout. This means that 
                           the code must now be compiled using /std:c++17.
@@ -87,8 +87,11 @@ History: PJN / 24-09-2011 1. Initial creation
                           for reporting this issue.
          PJN / 15-12-2023 1. Updated module to remove usage of _if_exists by now using ODBCVER and _ATL_MODULES 
                           preprocessor macro checks along with SFINAE.
+         PJN / 21-03-2026 1. Fixed a bug in the ODBC_PARAM_ENTRY_TYPE and ODBC_PARAM_ENTRY_PS_TYPE macros where a parameter 
+                          was declared as SQLType but then passed as sqlType. Thanks to Martin Kay for reporting this issue.
+                          2. Updated copyright details.
 
-Copyright (c) 2011 - 2023 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
+Copyright (c) 2011 - 2026 by PJ Naughter (Web: www.naughter.com, Email: pjna@naughter.com)
 
 All rights reserved.
 
@@ -320,7 +323,7 @@ DEFINE_ODBC_C_TYPE_FUNCTION(GUID, SQL_C_GUID)
 #define ODBC_PARAM_LENGTH(ParameterNumber, data, length) \
   _ODBC_PARAM_ENTRY_CODE(ParameterNumber, _ODBC_C_TYPE(data), _ODBC_SQL_TYPE(data), length, 0, &data, length, nullptr, data);
 
-#define ODBC_PARAM_ENTRY_TYPE(ParameterNumber, data, cType, SQLType) \
+#define ODBC_PARAM_ENTRY_TYPE(ParameterNumber, data, cType, sqlType) \
   _ODBC_PARAM_ENTRY_CODE(ParameterNumber, cType, sqlType, _ODBC_SIZE_TYPE(data), 0, &data, _ODBC_SIZE_TYPE(data), nullptr, data);
 
 #define ODBC_PARAM_ENTRY_STATUS(ParameterNumber, data, status) \
@@ -347,7 +350,7 @@ DEFINE_ODBC_C_TYPE_FUNCTION(GUID, SQL_C_GUID)
   _ODBC_PARAM_ENTRY_CODE(ParameterNumber, _ODBC_C_TYPE(data), _ODBC_SQL_TYPE(data), length, nPrecision, &data, length, nullptr, data); \
   __pragma(warning(pop))
 
-#define ODBC_PARAM_ENTRY_PS_TYPE(ParameterNumber, data, nPrecision, cType, SQLType) \
+#define ODBC_PARAM_ENTRY_PS_TYPE(ParameterNumber, data, nPrecision, cType, sqlType) \
   __pragma(warning(push)) \
   __pragma(warning(suppress: 26446 26485 26486 26489)) \
   _ODBC_PARAM_ENTRY_CODE(ParameterNumber, cType, sqlType, _ODBC_SIZE_TYPE(data), nPrecision, &data, _ODBC_SIZE_TYPE(data), nullptr, data); \
@@ -483,8 +486,7 @@ namespace CODBC
 #pragma warning(suppress: 26477)
 		CHandle() noexcept : m_h{ SQL_NULL_HANDLE },
 			m_Type{ 0 }
-		{
-		}
+		{}
 
 		CHandle(_In_ CHandle& h) = delete;
 
@@ -497,8 +499,7 @@ namespace CODBC
 
 		explicit CHandle(_In_ SQLSMALLINT Type, _In_opt_ SQLHANDLE h) noexcept : m_h{ h },
 			m_Type{ Type }
-		{
-		}
+		{}
 
 		~CHandle() noexcept
 		{
@@ -2139,8 +2140,7 @@ namespace CODBC
 	public:
 		//Constructors / Destructors
 		CDynamicColumnAccessor() noexcept : m_nColumns{ 0 }
-		{
-		}
+		{}
 
 		//Methods
 #pragma warning(suppress: 26434)
@@ -2221,7 +2221,7 @@ namespace CODBC
 		[[nodiscard]] SQLSMALLINT GetColumnNo(_In_z_ LPCTSTR pszColumnName) const
 		{
 #pragma warning(suppress: 26489)
-			const auto iter{ std::find_if(this->m_ColumnNames.begin(), this->m_ColumnNames.end(), [pszColumnName](const String& element)
+			const auto iter{ std::find_if(this->m_ColumnNames.begin(), this->m_ColumnNames.end(), [pszColumnName](const String& element) noexcept
 			  {
 				return element == pszColumnName;
 			  }) };
