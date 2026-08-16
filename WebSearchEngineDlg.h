@@ -108,5 +108,6 @@ protected:
 	 *        and closes the dialog.
 	 */
 	afx_msg void OnBnClickedCancel();
+
 	DECLARE_MESSAGE_MAP()
 };

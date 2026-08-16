@@ -108,13 +108,15 @@ END_MESSAGE_MAP()
 CString GetModuleFileName(_Inout_opt_ DWORD* pdwLastError = nullptr)
 {
 	CString strModuleFileName;
-	DWORD dwSize{ _MAX_PATH };
+	DWORD dwSize{ _MAX_PATH };   // start with the common path length
 	while (true)
 	{
+		// allocate a buffer large enough for the current attempt
 		TCHAR* pszModuleFileName{ strModuleFileName.GetBuffer(dwSize) };
 		const DWORD dwResult{ ::GetModuleFileName(nullptr, pszModuleFileName, dwSize) };
 		if (dwResult == 0)
 		{
+			// API failed; propagate the Win32 error and return empty
 			if (pdwLastError != nullptr)
 				*pdwLastError = GetLastError();
 			strModuleFileName.ReleaseBuffer(0);
@@ -122,6 +124,7 @@ CString GetModuleFileName(_Inout_opt_ DWORD* pdwLastError = nullptr)
 		}
 		else if (dwResult < dwSize)
 		{
+			// buffer was large enough; the path fits in dwResult characters
 			if (pdwLastError != nullptr)
 				*pdwLastError = ERROR_SUCCESS;
 			strModuleFileName.ReleaseBuffer(dwResult);
@@ -129,6 +132,7 @@ CString GetModuleFileName(_Inout_opt_ DWORD* pdwLastError = nullptr)
 		}
 		else if (dwResult == dwSize)
 		{
+			// buffer was too small; double the size and retry
 			strModuleFileName.ReleaseBuffer(0);
 			dwSize *= 2;
 		}
@@ -139,6 +143,7 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 
+	// obtain the full path of this executable to load version resources
 	CString strFullPath{ GetModuleFileName() };
 	if (strFullPath.IsEmpty())
 #pragma warning(suppress: 26487)
@@ -148,11 +153,14 @@ BOOL CAboutDlg::OnInitDialog()
 	{
 		CString strName = m_pVersionInfo.GetProductName().c_str();
 		CString strVersion = m_pVersionInfo.GetProductVersionAsString().c_str();
+		// normalise the version string: remove spaces and replace commas with dots
 		strVersion.Replace(_T(" "), _T(""));
 		strVersion.Replace(_T(","), _T("."));
+		// locate the first two dot separators to build a "major.minor" string
 		const int nFirst = strVersion.Find(_T('.'));
 		const int nSecond = strVersion.Find(_T('.'), nFirst + 1);
-		strVersion.Truncate(nSecond);
+		strVersion.Truncate(nSecond);   // keep only major.minor
+		// zero-pad single-digit minor versions (e.g. "1.5" -> "1.05")
 		if (nSecond == (nFirst + 2))
 			strVersion.Insert(nFirst + 1, _T("0"));
 #if _WIN32 || _WIN64
@@ -241,14 +249,17 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 		ASSERT(bNameValid);
 		if (!strAboutMenu.IsEmpty())
 		{
+			// append separator and the standard About entry
 			pSysMenu->AppendMenu(MF_SEPARATOR);
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
+		// append social-media links
 		pSysMenu->AppendMenu(MF_SEPARATOR);
 		pSysMenu->AppendMenu(MF_STRING, IDM_TWITTER, _T("Twitter"));
 		pSysMenu->AppendMenu(MF_STRING, IDM_LINKEDIN, _T("LinkedIn"));
 		pSysMenu->AppendMenu(MF_STRING, IDM_FACEBOOK, _T("Facebook"));
 		pSysMenu->AppendMenu(MF_STRING, IDM_INSTAGRAM, _T("Instagram"));
+		// append GitHub repository links
 		pSysMenu->AppendMenu(MF_SEPARATOR);
 		pSysMenu->AppendMenu(MF_STRING, IDM_ISSUES, _T("Issues"));
 		pSysMenu->AppendMenu(MF_STRING, IDM_DISCUSSIONS, _T("Discussions"));
@@ -265,6 +276,7 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	if (pConnectionSettingsDlg.DoModal() != IDOK)
 		return FALSE;
 
+	// read connection settings persisted in the registry
 	CWinApp* pWinApp = AfxGetApp();
 	ASSERT(pWinApp != NULL);
 
@@ -274,42 +286,51 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	// CString strFileName = pWinApp->GetProfileString(REGKEY_SECTION, REGKEY_FILENAME, DEFAULT_FILENAME);
 	CString strUsername = pWinApp->GetProfileString(REGKEY_SECTION, REGKEY_USERNAME, DEFAULT_USERNAME);
 
+	// retrieve the encrypted/stored password from the registry
 	TCHAR lpszPassword[0x100] = { 0, };
 	VERIFY(GetRegistryPassword(NULL, REGKEY_SECTION, REGKEY_PASSWORD, lpszPassword, DEFAULT_PASSWORD));
 
+	// create the ODBC environment and request ODBC 3.8 behaviour
 	SQLRETURN nRet = m_pEnvironment.Create();
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
 	nRet = m_pEnvironment.SetAttr(SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
+	// enable default ODBC connection pooling to reuse connections
 	nRet = m_pEnvironment.SetAttrU(SQL_ATTR_CONNECTION_POOLING, SQL_CP_DEFAULT);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pEnvironment);
 
+	// allocate a connection handle bound to the environment
 	nRet = m_pConnection.Create(m_pEnvironment);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pConnection);
 
+	// build the MySQL ODBC connection string from the retrieved settings
 	_stprintf(m_sConnectionInString, _T("Driver={MySQL ODBC 8.0 Unicode Driver};Server=%s;Port=%s;Database=%s;User=%s;Password=%s;"),
 		strHostName.GetBuffer(0), strHostPort.GetBuffer(0), strDatabase.GetBuffer(0), strUsername.GetBuffer(0), lpszPassword);
 	strHostName.ReleaseBuffer();
 	strHostPort.ReleaseBuffer();
 	strDatabase.ReleaseBuffer();
 	strUsername.ReleaseBuffer();
+	// open the database connection; the driver fills m_sConnectionOutString on success
 	nRet = m_pConnection.DriverConnect(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(m_sConnectionInString)), m_sConnectionOutString);
 	ODBC_CHECK_RETURN_FALSE(nRet, m_pConnection);
 
+	// reset the UI counters shown on the dialog
 	m_pWebpageCounter.SetWindowText(_T("0"));
 	m_pKeywordCounter.SetWindowText(_T("0"));
 
+	// (re-)create the database schema from scratch so every run starts clean
 	CGenericStatement pGenericStatement;
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `occurrence`;")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `occurrence`;")));  // drop dependant table first
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `keyword`;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("DROP TABLE IF EXISTS `webpage`;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `webpage` (`webpage_id` BIGINT NOT NULL AUTO_INCREMENT, `url` VARCHAR(256) NOT NULL, `title` VARCHAR(256) NOT NULL, `content` LONGTEXT NOT NULL, PRIMARY KEY(`webpage_id`)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `keyword` (`keyword_id` BIGINT NOT NULL AUTO_INCREMENT, `name` VARCHAR(256) NOT NULL, PRIMARY KEY(`keyword_id`)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
 	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE TABLE `occurrence` (`webpage_id` BIGINT NOT NULL, `keyword_id` BIGINT NOT NULL, `counter` BIGINT NOT NULL, `pagerank` REAL NOT NULL, PRIMARY KEY(`webpage_id`, `keyword_id`), FOREIGN KEY webpage_fk(webpage_id) REFERENCES webpage(webpage_id), FOREIGN KEY keyword_fk(keyword_id) REFERENCES keyword(keyword_id)) ENGINE=InnoDB CHARACTER SET utf8 COLLATE utf8_general_ci;")));
-	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE UNIQUE INDEX index_name ON `keyword`(`name`);")));
+	VERIFY(pGenericStatement.Execute(m_pConnection, _T("CREATE UNIQUE INDEX index_name ON `keyword`(`name`);")));  // enforce unique keywords
 
+	// launch the background crawling thread, passing this dialog as context
 	m_hThread = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CrawlingThreadProc, this, 0, &m_nThreadID);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -327,55 +348,58 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
  */
 void CWebSearchEngineDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
+	// mask the low nibble so IDM_ABOUTBOX variants all resolve correctly
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
+		// show the About dialog modally
 		CAboutDlg dlgAbout;
 		dlgAbout.DoModal();
 	}
 	else
 	{
-		if (nID == IDM_TWITTER)
+		if (nID == IDM_TWITTER)   // open author's Twitter/X profile
 		{
 			::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://x.com/stefanmihaimoga"), nullptr, nullptr, SW_SHOW);
 		}
 		else
 		{
-			if (nID == IDM_LINKEDIN)
+			if (nID == IDM_LINKEDIN)   // open author's LinkedIn profile
 			{
 				::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.linkedin.com/in/stefanmihaimoga/"), nullptr, nullptr, SW_SHOW);
 			}
 			else
 			{
-				if (nID == IDM_FACEBOOK)
+				if (nID == IDM_FACEBOOK)   // open author's Facebook profile
 				{
 					::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.facebook.com/stefanmihaimoga"), nullptr, nullptr, SW_SHOW);
 				}
 				else
 				{
-					if (nID == IDM_INSTAGRAM)
+					if (nID == IDM_INSTAGRAM)   // open author's Instagram profile
 					{
 						::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://www.instagram.com/stefanmihaimoga/"), nullptr, nullptr, SW_SHOW);
 					}
 					else
 					{
-						if (nID == IDM_ISSUES)
+						if (nID == IDM_ISSUES)   // open GitHub Issues page
 						{
 							::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/issues"), nullptr, nullptr, SW_SHOW);
 						}
 						else
 						{
-							if (nID == IDM_DISCUSSIONS)
+							if (nID == IDM_DISCUSSIONS)   // open GitHub Discussions page
 							{
 								::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/discussions"), nullptr, nullptr, SW_SHOW);
 							}
 							else
 							{
-								if (nID == IDM_WIKI)
+								if (nID == IDM_WIKI)   // open GitHub Wiki page
 								{
 									::ShellExecute(GetSafeHwnd(), _T("open"), _T("https://github.com/mihaimoga/WebSearchEngine/wiki"), nullptr, nullptr, SW_SHOW);
 								}
 								else
 								{
+									// unrecognised command; let the base class handle it (e.g. SC_MOVE, SC_SIZE)
 									CDialog::OnSysCommand(nID, lParam);
 								}
 							}
@@ -450,16 +474,21 @@ DWORD WINAPI CrawlingThreadProc(LPVOID lpParam)
 	if (lpParam != NULL)
 	{
 		CWebSearchEngineDlg* pWebSearchEngineDlg = (CWebSearchEngineDlg*)lpParam;
-		pWebSearchEngineDlg->m_bThreadRunning = true;
-		pWebSearchEngineDlg->m_pProgress.SetMarquee(TRUE, 30);
+		pWebSearchEngineDlg->m_bThreadRunning = true;   // signal that the thread is active
+		pWebSearchEngineDlg->m_pProgress.SetMarquee(TRUE, 30);  // start indeterminate progress animation
+		// seed the frontier with the initial URL
 		AddURLToFrontier("https://en.wikipedia.org/");
 		while (pWebSearchEngineDlg->m_bThreadRunning)
 		{
+			// dequeue the next URL from the frontier; stop if the queue is empty
 			if (ExtractURLFromFrontier(lpszURL))
 			{
+				// display the URL currently being processed
 				pWebSearchEngineDlg->m_pCrawling.SetWindowText(CString(lpszURL.c_str()));
+				// fetch the page content to a temporary file
 				if (DownloadURLToFile(lpszURL, lpszFilename))
 				{
+					// parse HTML, extract keywords, store in DB; abort on error
 					if (!ProcessHTML(pWebSearchEngineDlg, lpszFilename, lpszURL))
 					{
 						break;
@@ -467,11 +496,12 @@ DWORD WINAPI CrawlingThreadProc(LPVOID lpParam)
 				}
 			}
 			else
-				break;
+				break;  // frontier exhausted
 		}
 
+		// crawling finished (normally or due to an error); reset UI state
 		pWebSearchEngineDlg->m_bThreadRunning = false;
-		pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);
+		pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);  // stop progress animation
 	}
 
 	::ExitThread(0);
@@ -482,19 +512,23 @@ BOOL WaitWithMessageLoop(HANDLE hEvent, DWORD dwTimeout)
 {
 	DWORD dwRet;
 	MSG msg;
+	// if no event was supplied, create a dummy one that never fires
 	hEvent = hEvent ? hEvent : CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	while (true)
 	{
+		// wait for the event OR for new window messages, whichever comes first
 		dwRet = MsgWaitForMultipleObjects(1, &hEvent, FALSE, dwTimeout, QS_ALLINPUT);
 		if (dwRet == WAIT_OBJECT_0)
-			return TRUE;
+			return TRUE;  // event signalled; success
 		if (dwRet != WAIT_OBJECT_0 + 1)
-			break;
+			break;  // timeout or error
+		// a message arrived; drain the queue before waiting again
 		while (PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
+			// check whether the event fired while processing messages
 			if (hEvent && (WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0))
 				return TRUE;
 		}
@@ -513,8 +547,11 @@ void CWebSearchEngineDlg::OnBnClickedCancel()
 {
 	if (m_bThreadRunning)
 	{
+		// signal the worker thread to stop by clearing the running flag
 		m_bThreadRunning = false;
+		// pump messages while waiting so the UI stays responsive
 		VERIFY(WaitWithMessageLoop(m_hThread, INFINITE));
 	}
+	// close the dialog
 	CDialogEx::OnCancel();
 }

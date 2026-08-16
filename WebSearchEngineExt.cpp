@@ -92,6 +92,7 @@ std::string wstring_to_utf8(const std::wstring& str)
 bool AddURLToFrontier(const std::string& lpszURL)
 {
 	bool found = false;
+	// Check if the URL was already crawled; if so, skip it
 	for (auto it = gFrontierOlder.begin(); it != gFrontierOlder.end(); it++)
 	{
 		if (lpszURL.compare(it->c_str()) == 0)
@@ -99,10 +100,12 @@ bool AddURLToFrontier(const std::string& lpszURL)
 			return true; // URL already visited
 		}
 	}
+	// Check if the URL is already waiting in the frontier queue
 	for (auto it = gFrontierArray.begin(); it != gFrontierArray.end(); it++)
 	{
 		if (lpszURL.compare(it->c_str()) == 0)
 		{
+			// URL is already queued; boost its priority score
 			found = true;
 			gFrontierScore[lpszURL]++;
 			break;
@@ -110,6 +113,7 @@ bool AddURLToFrontier(const std::string& lpszURL)
 	}
 	if (!found)
 	{
+		// New URL: add to frontier queue with initial priority score of 1
 		gFrontierArray.push_back(lpszURL);
 		gFrontierScore[lpszURL] = 1;
 	}
@@ -180,15 +184,18 @@ bool DownloadURLToFile(const std::string& lpszURL, std::string& lpszFilename)
 	char lpszTempPath[MAX_PATH + 1] = { 0, };
 	char lpszTempFile[MAX_PATH + 1] = { 0, };
 
+	// Retrieve the system temporary directory path
 	const DWORD dwTempPath = GetTempPathA(sizeof(lpszTempPath) - 1, lpszTempPath);
 	if (dwTempPath > 0)
 	{
-		lpszTempPath[dwTempPath] = '\0';
+		lpszTempPath[dwTempPath] = '\0'; // ensure null-termination
+		// Generate a unique temporary file name in the temp directory
 		if (GetTempFileNameA(lpszTempPath, "map", 0, lpszTempFile) != 0)
 		{
+			// Download the web page content directly into the temporary file
 			if (URLDownloadToFileA(NULL, lpszURL.c_str(), lpszTempFile, 0, NULL) == S_OK)
 			{
-				lpszFilename = lpszTempFile;
+				lpszFilename = lpszTempFile; // return the temp file path to the caller
 				return true;
 			}
 		}
@@ -295,36 +302,41 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 	std::string pHtmlContent;
 	if (pHtmlFile.is_open())
 	{
+		// Pre-allocate the string to hold the entire file content, then read it in one pass
 		pHtmlFile.seekg(0, std::ios::end);
 		pHtmlContent.reserve(static_cast<unsigned int>(pHtmlFile.tellg()));
 		pHtmlFile.seekg(0, std::ios::beg);
-
 		pHtmlContent.assign((std::istreambuf_iterator<char>(pHtmlFile)),
 			std::istreambuf_iterator<char>());
 		pHtmlFile.close();
 
+		// Extract the page title from the <title>...</title> tag
 		std::wstring pTitle;
 		std::size_t found = pHtmlContent.find("<title>", 0);
 		if (std::string::npos != found)
 		{
-			found += 7;
+			found += 7; // advance past the opening <title> tag
 			const std::size_t last_char = pHtmlContent.find("</title>", found);
 			if (std::string::npos != last_char)
 			{
+				// Decode HTML entities, convert to wide string, trim whitespace, and cap length
 				pTitle = trim(utf8_to_wstring(UnquoteHTML(pHtmlContent.substr(found, last_char - found)))).substr(0, 0x100 - 1);
 			}
 		}
+		// Pages without a title are considered invalid; skip further processing
 		if (pTitle.length() == 0)
 			return true;
 
+		// Scan the HTML for all anchor links and add discovered URLs to the frontier
 		found = pHtmlContent.find("<a href=\"", 0);
 		while (std::string::npos != found)
 		{
-			found += 9;
+			found += 9; // advance past the '<a href="' prefix
 			const std::size_t last_char = pHtmlContent.find('\"', found);
 			if (std::string::npos != last_char)
 			{
 				std::string hyperlink = pHtmlContent.substr(found, last_char - found);
+				// Strip any fragment identifier (#section) from the URL
 				std::size_t diez = hyperlink.find('#');
 				if (std::string::npos != diez)
 				{
@@ -337,38 +349,44 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 				DWORD dwLength = MAX_URL_LENGTH;
 				wcscpy_s(lpszRelativeURL, _countof(lpszRelativeURL), CString(hyperlink.c_str()));
 				wcscpy_s(lpszDomainURL, _countof(lpszDomainURL), CString(lpszURL.c_str()));
+				// Resolve the potentially relative URL against the base page URL
 				if (CoInternetCombineUrl(lpszDomainURL, lpszRelativeURL, 0, lpszAbsoluteURL, MAX_URL_LENGTH, &dwLength, 0) == S_OK)
 				{
-					lpszAbsoluteURL[dwLength] = '\0';
+					lpszAbsoluteURL[dwLength] = '\0'; // null-terminate the resolved URL
 					// OutputDebugString(CString(lpszAbsoluteURL) + _T("\n"));
 					hyperlink = CStringA(lpszAbsoluteURL);
+					// Only queue reasonably short URLs to avoid malformed entries
 					if (hyperlink.length() < 0x100)
 						AddURLToFrontier(hyperlink);
 				}
 			}
-			found = pHtmlContent.find("<a href=\"", found);
+			found = pHtmlContent.find("<a href=\"", found); // search for the next anchor
 		}
 
 		const std::wstring& pURL = utf8_to_wstring(lpszURL);
 		OutputDebugString(CString(pURL.c_str()) + _T("\n"));
 		// OutputDebugString(CString(pTitle.c_str()) + _T("\n"));
+
+		// Convert the raw HTML to plain text and normalize all whitespace to single spaces
 		std::wstring pPlainText = trim(utf8_to_wstring(UnquoteHTML(pHtmlToText.Convert(pHtmlContent))));
-		findAndReplaceAll(pPlainText, _T("\t"), _T(" "));
-		findAndReplaceAll(pPlainText, _T("\n"), _T(" "));
-		findAndReplaceAll(pPlainText, _T("\r"), _T(" "));
-		while (findAndReplaceAll(pPlainText, _T("  "), _T(" ")) > 0);
-		pPlainText = pPlainText.substr(0, 0x10000 - 1);
+		findAndReplaceAll(pPlainText, _T("\t"), _T(" ")); // tabs -> space
+		findAndReplaceAll(pPlainText, _T("\n"), _T(" ")); // newlines -> space
+		findAndReplaceAll(pPlainText, _T("\r"), _T(" ")); // carriage returns -> space
+		while (findAndReplaceAll(pPlainText, _T("  "), _T(" ")) > 0); // collapse multiple spaces
+		pPlainText = pPlainText.substr(0, 0x10000 - 1); // cap content length for the DB column
 		OutputDebugString(CString(pPlainText.c_str()) + _T("\n"));
 
 		SQLRETURN nRet = 0;
 		CWebpageInsert pWebpageInsert;
+		// Insert the webpage record; on failure reconnect and retry once
 		if (!pWebpageInsert.Execute(pWebSearchEngineDlg->m_pConnection, pURL, pTitle, pPlainText)) // add webpage to database
 		{
 			pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);
+			// Wait for the DB connection to recover, then reconnect
 			do {
 				::MessageBeep(0xFFFFFFFF);
 				nRet = pWebSearchEngineDlg->m_pConnection.Disconnect();
-				::Sleep(30 * 1000);
+				::Sleep(30 * 1000); // back-off 30 seconds before retrying
 				nRet = pWebSearchEngineDlg->m_pConnection.DriverConnect(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(pWebSearchEngineDlg->m_sConnectionInString)), pWebSearchEngineDlg->m_sConnectionOutString);
 			} while (!SQL_SUCCEEDED(nRet));
 			if (!pWebpageInsert.Execute(pWebSearchEngineDlg->m_pConnection, pURL, pTitle, pPlainText))
@@ -378,6 +396,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 			}
 			pWebSearchEngineDlg->m_pProgress.SetMarquee(TRUE, 30);
 		}
+		// Record the new webpage ID and update the UI counter
 		gWebpageID[pURL] = ++gCurrentWebpageID;
 		pWebSearchEngineDlg->m_pWebpageCounter.SetWindowText(std::to_wstring(gCurrentWebpageID).c_str());
 
@@ -396,14 +415,17 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 			// Find next "non-delimiter"
 			pos = pLowerCaseText.find_first_of(DELIMITERS, lastPos);
 
+			// Discard empty tokens produced by consecutive delimiters
 			if (pKeyword.length() == 0)
 				continue;
 
+			// Only index purely alphabetic words; skip tokens with digits or punctuation
 			if (pKeyword.find_first_not_of(_T("abcdefghijklmnopqrstuvwxyz")) != std::string::npos)
 				continue;
 
 			OutputDebugString(CString(pKeyword.c_str()) + _T("\n"));
 			bool already_added = false;
+			// Check whether this keyword was encountered in a previous page
 			for (auto it = gWordArray.begin(); it != gWordArray.end(); it++)
 			{
 				if (pKeyword.compare(it->c_str()) == 0)
@@ -415,16 +437,18 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 
 			if (!already_added)
 			{
+				// First time seeing this keyword: register it globally and persist it
 				gWordArray.push_back(pKeyword);
 
 				CKeywordInsert pKeywordInsert;
+				// Insert the new keyword; on failure reconnect and retry once
 				if (!pKeywordInsert.Execute(pWebSearchEngineDlg->m_pConnection, pKeyword)) // add keyword to database
 				{
 					pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);
 					do {
 						::MessageBeep(0xFFFFFFFF);
 						nRet = pWebSearchEngineDlg->m_pConnection.Disconnect();
-						::Sleep(30 * 1000);
+						::Sleep(30 * 1000); // back-off 30 seconds before retrying
 						nRet = pWebSearchEngineDlg->m_pConnection.DriverConnect(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(pWebSearchEngineDlg->m_sConnectionInString)), pWebSearchEngineDlg->m_sConnectionOutString);
 					} while (!SQL_SUCCEEDED(nRet));
 					if (!pKeywordInsert.Execute(pWebSearchEngineDlg->m_pConnection, pKeyword))
@@ -434,6 +458,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 					}
 					pWebSearchEngineDlg->m_pProgress.SetMarquee(TRUE, 30);
 				}
+				// Record the new keyword ID and update the UI counter
 				gKeywordID[pKeyword] = ++gCurrentKeywordID;
 				pWebSearchEngineDlg->m_pKeywordCounter.SetWindowText(std::to_wstring(gCurrentKeywordID).c_str());
 
@@ -457,18 +482,21 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 			}
 			else
 			{
+				// Keyword already known: try to insert a new occurrence row for this page
 				const __int64 nKeywordID = gKeywordID[pKeyword];
 				COccurrenceInsert pOccurrenceInsert;
+				// If a row already exists (duplicate), fall back to incrementing the counter
 				if (!pOccurrenceInsert.Execute(pWebSearchEngineDlg->m_pConnection, gCurrentWebpageID, nKeywordID, 1))
 				{
 					COccurrenceUpdate pOccurrenceUpdate;
+					// Update the existing occurrence counter; on failure reconnect and retry once
 					if (!pOccurrenceUpdate.Execute(pWebSearchEngineDlg->m_pConnection, gCurrentWebpageID, nKeywordID))
 					{
 						pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);
 						do {
 							::MessageBeep(0xFFFFFFFF);
 							nRet = pWebSearchEngineDlg->m_pConnection.Disconnect();
-							::Sleep(30 * 1000);
+							::Sleep(30 * 1000); // back-off 30 seconds before retrying
 							nRet = pWebSearchEngineDlg->m_pConnection.DriverConnect(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(pWebSearchEngineDlg->m_sConnectionInString)), pWebSearchEngineDlg->m_sConnectionOutString);
 						} while (!SQL_SUCCEEDED(nRet));
 						if (!pOccurrenceUpdate.Execute(pWebSearchEngineDlg->m_pConnection, gCurrentWebpageID, nKeywordID))
@@ -481,6 +509,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 				}
 			}
 
+			// Accumulate this keyword in the pending data mining term list
 			already_added = false;
 			for (auto it = gDataMiningTerms.begin(); it != gDataMiningTerms.end(); it++)
 			{
@@ -494,6 +523,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 				gDataMiningTerms.push_back(pKeyword);
 		}
 
+		// Every 1000 crawled pages run data mining to refresh PageRank scores
 		if ((gCurrentWebpageID % 1000) == 0)
 		{
 			for (auto it = gDataMiningTerms.begin(); it != gDataMiningTerms.end(); it++)
@@ -502,13 +532,14 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 				pWebSearchEngineDlg->m_pCrawling.SetWindowText(strMessage);
 
 				CDataMiningUpdate pDataMiningUpdate;
+				// Apply data mining update; on failure reconnect and retry once
 				if (!pDataMiningUpdate.Execute(pWebSearchEngineDlg->m_pConnection, *it))
 				{
 					pWebSearchEngineDlg->m_pProgress.SetMarquee(FALSE, 30);
 					do {
 						::MessageBeep(0xFFFFFFFF);
 						nRet = pWebSearchEngineDlg->m_pConnection.Disconnect();
-						::Sleep(30 * 1000);
+						::Sleep(30 * 1000); // back-off 30 seconds before retrying
 						nRet = pWebSearchEngineDlg->m_pConnection.DriverConnect(const_cast<SQLTCHAR*>(reinterpret_cast<const SQLTCHAR*>(pWebSearchEngineDlg->m_sConnectionInString)), pWebSearchEngineDlg->m_sConnectionOutString);
 					} while (!SQL_SUCCEEDED(nRet));
 					if (!pDataMiningUpdate.Execute(pWebSearchEngineDlg->m_pConnection, *it))
@@ -519,7 +550,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 					pWebSearchEngineDlg->m_pProgress.SetMarquee(TRUE, 30);
 				}
 			}
-			gDataMiningTerms.clear();
+			gDataMiningTerms.clear(); // reset the list for the next batch
 		}
 		return true;
 	}

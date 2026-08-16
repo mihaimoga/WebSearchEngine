@@ -143,22 +143,23 @@ public:
 	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pURL, const std::wstring& pTitle, const std::wstring& pContent)
 	{
-		ClearRecord();
+		ClearRecord(); // zero all member buffers before use
 		CODBC::CStatement statement;
-		SQLRETURN nRet = statement.Create(pDbConnect);
+		SQLRETURN nRet = statement.Create(pDbConnect); // allocate an ODBC statement handle
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Prepare(GetDefaultCommand());
+		nRet = statement.Prepare(GetDefaultCommand()); // compile the INSERT SQL
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
+		// Copy the input values into the accessor member buffers
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszURL, _countof(m_lpszURL), pURL.c_str());
 		_tcscpy_s(m_lpszTitle, _countof(m_lpszTitle), pTitle.c_str());
 		_tcscpy_s(m_lpszContent, _countof(m_lpszContent), pContent.c_str());
-		nRet = BindParameters(statement);
+		nRet = BindParameters(statement); // bind the accessor buffers to the statement parameters
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Execute();
+		nRet = statement.Execute(); // run the INSERT
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
@@ -203,20 +204,21 @@ public:
 	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
-		ClearRecord();
+		ClearRecord(); // zero all member buffers before use
 		CODBC::CStatement statement;
-		SQLRETURN nRet = statement.Create(pDbConnect);
+		SQLRETURN nRet = statement.Create(pDbConnect); // allocate an ODBC statement handle
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Prepare(GetDefaultCommand());
+		nRet = statement.Prepare(GetDefaultCommand()); // compile the INSERT SQL
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
+		// Copy the keyword name into the accessor buffer
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszName, _countof(m_lpszName), pKeyword.c_str());
-		nRet = BindParameters(statement);
+		nRet = BindParameters(statement); // bind the accessor buffer to the statement parameter
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Execute();
+		nRet = statement.Execute(); // run the INSERT
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
@@ -269,23 +271,24 @@ public:
 	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID, const __int64& nCounter)
 	{
-		ClearRecord();
+		ClearRecord(); // zero all member buffers before use
 		CODBC::CStatement statement;
-		SQLRETURN nRet = statement.Create(pDbConnect);
+		SQLRETURN nRet = statement.Create(pDbConnect); // allocate an ODBC statement handle
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Prepare(GetDefaultCommand());
+		nRet = statement.Prepare(GetDefaultCommand()); // compile the INSERT SQL
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
+		// Populate the accessor fields with the supplied IDs, count, and default PageRank
 #pragma warning(suppress: 26485)
 		m_nWebpageID = nWebpageID;
 		m_nKeywordID = nKeywordID;
 		m_nCounter = nCounter;
-		m_rPageRank = 0.0;
-		nRet = BindParameters(statement);
+		m_rPageRank = 0.0; // PageRank is computed later by the data mining step
+		nRet = BindParameters(statement); // bind the accessor fields to the statement parameters
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Execute();
+		nRet = statement.Execute(); // run the INSERT
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
@@ -333,21 +336,22 @@ public:
 	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const __int64& nWebpageID, const __int64& nKeywordID)
 	{
-		ClearRecord();
+		ClearRecord(); // zero all member buffers before use
 		CODBC::CStatement statement;
-		SQLRETURN nRet = statement.Create(pDbConnect);
+		SQLRETURN nRet = statement.Create(pDbConnect); // allocate an ODBC statement handle
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Prepare(GetDefaultCommand());
+		nRet = statement.Prepare(GetDefaultCommand()); // compile the UPDATE SQL
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
+		// Set the IDs that identify the row whose counter should be incremented
 #pragma warning(suppress: 26485)
 		m_nWebpageID = nWebpageID;
 		m_nKeywordID = nKeywordID;
-		nRet = BindParameters(statement);
+		nRet = BindParameters(statement); // bind the accessor fields to the statement parameters
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Execute();
+		nRet = statement.Execute(); // run the UPDATE
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
@@ -392,20 +396,21 @@ public:
 	 */
 	bool Execute(CODBC::CConnection& pDbConnect, const std::wstring& pKeyword)
 	{
-		ClearRecord();
+		ClearRecord(); // zero all member buffers before use
 		CODBC::CStatement statement;
-		SQLRETURN nRet = statement.Create(pDbConnect);
+		SQLRETURN nRet = statement.Create(pDbConnect); // allocate an ODBC statement handle
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Prepare(GetDefaultCommand());
+		nRet = statement.Prepare(GetDefaultCommand()); // compile the UPDATE SQL with the data_mining() call
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
+		// Copy the keyword name used to filter the rows to be updated
 #pragma warning(suppress: 26485)
 		_tcscpy_s(m_lpszName, _countof(m_lpszName), pKeyword.c_str());
-		nRet = BindParameters(statement);
+		nRet = BindParameters(statement); // bind the accessor buffer to the statement parameter
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 
-		nRet = statement.Execute();
+		nRet = statement.Execute(); // run the UPDATE to recalculate PageRank for this keyword
 		ODBC_CHECK_RETURN_FALSE(nRet, statement);
 		return true;
 	}
