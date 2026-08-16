@@ -30,24 +30,46 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #define new DEBUG_NEW
 #endif
 
+/**
+ * @brief Entry point for the background web-crawling worker thread.
+ * @param lpParam Pointer to the owning CWebSearchEngineDlg instance.
+ * @return Thread exit code.
+ */
 DWORD WINAPI CrawlingThreadProc(LPVOID lpParam);
 
-// CAboutDlg dialog used for App About
-
+/**
+ * @brief Dialog displayed when the user selects "About" from the system menu.
+ *
+ * Shows the application version, license text, website, and contact e-mail.
+ */
 class CAboutDlg : public CDialog
 {
 public:
+	/** @brief Standard constructor. */
 	CAboutDlg();
 
 	// Dialog Data
 	enum { IDD = IDD_ABOUTBOX };
 
 protected:
+	/**
+	 * @brief Exchanges data between dialog controls and member variables.
+	 * @param pDX Pointer to the data-exchange object.
+	 */
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 // Implementation
 public:
+	/**
+	 * @brief Initializes the About dialog, populating the version label,
+	 *        license text, website, and e-mail hyperlinks.
+	 * @return TRUE to set input focus to the first control; FALSE otherwise.
+	 */
 	virtual BOOL OnInitDialog();
+
+	/**
+	 * @brief Handles WM_DESTROY; performs cleanup before the window is destroyed.
+	 */
 	afx_msg void OnDestroy();
 
 protected:
@@ -77,6 +99,12 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
+/**
+ * @brief Retrieves the fully-qualified path of the current executable.
+ * @param pdwLastError Optional output parameter that receives the last Win32
+ *                     error code on failure, or ERROR_SUCCESS on success.
+ * @return CString containing the full module path, or an empty string on failure.
+ */
 CString GetModuleFileName(_Inout_opt_ DWORD* pdwLastError = nullptr)
 {
 	CString strModuleFileName;
@@ -152,6 +180,11 @@ void CAboutDlg::OnDestroy()
 
 // CWebSearchEngineDlg dialog
 
+/**
+ * @brief Constructs the main dialog, loading the application icon and
+ *        initialising the thread tracking members.
+ * @param pParent Optional pointer to the parent window.
+ */
 CWebSearchEngineDlg::CWebSearchEngineDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_WEBSEARCHENGINE_DIALOG, pParent)
 {
@@ -160,6 +193,10 @@ CWebSearchEngineDlg::CWebSearchEngineDlg(CWnd* pParent /*=NULL*/)
 	m_nThreadID = 0;
 }
 
+/**
+ * @brief Exchanges data between dialog controls and member variables.
+ * @param pDX Pointer to the data-exchange object.
+ */
 void CWebSearchEngineDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
@@ -178,6 +215,13 @@ END_MESSAGE_MAP()
 
 // CWebSearchEngineDlg message handlers
 
+/**
+ * @brief Initializes the dialog: adds social/repository entries to the system
+ *        menu, establishes the ODBC connection, creates the database schema,
+ *        and launches the background crawling thread.
+ * @return TRUE to set input focus to the first control; FALSE if initialization
+ *         fails (e.g., connection settings cancelled or ODBC error).
+ */
 BOOL CWebSearchEngineDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
@@ -271,6 +315,16 @@ BOOL CWebSearchEngineDlg::OnInitDialog()
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
+/**
+ * @brief Handles WM_SYSCOMMAND messages.
+ *
+ * Dispatches the About box and opens social-media / repository URLs
+ * chosen from the system menu; all other commands are forwarded to the
+ * base-class handler.
+ *
+ * @param nID    System command identifier (IDM_ABOUTBOX, IDM_TWITTER, etc.).
+ * @param lParam Additional message-specific data.
+ */
 void CWebSearchEngineDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
@@ -338,6 +392,12 @@ void CWebSearchEngineDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  to draw the icon.  For MFC applications using the document/view model,
 //  this is automatically done for you by the framework.
 
+/**
+ * @brief Handles WM_PAINT.
+ *
+ * When the window is minimized the application icon is drawn centred in the
+ * client area; otherwise the default CDialogEx painting is performed.
+ */
 void CWebSearchEngineDlg::OnPaint()
 {
 	if (IsIconic())
@@ -365,11 +425,25 @@ void CWebSearchEngineDlg::OnPaint()
 
 // The system calls this function to obtain the cursor to display while the user drags
 //  the minimized window.
+/**
+ * @brief Returns the cursor displayed while the user drags the minimized window.
+ * @return Handle to the application icon cast to HCURSOR.
+ */
 HCURSOR CWebSearchEngineDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+/**
+ * @brief Background worker thread that performs web crawling and indexing.
+ *
+ * Iterates over URLs, fetches HTML content, extracts keywords, and stores
+ * results in the connected ODBC database. Updates the dialog controls to
+ * reflect crawling progress. Sets m_bThreadRunning to false when finished.
+ *
+ * @param lpParam Pointer to the owning CWebSearchEngineDlg instance.
+ * @return Always returns 0.
+ */
 DWORD WINAPI CrawlingThreadProc(LPVOID lpParam)
 {
 	std::string lpszURL, lpszFilename;
@@ -428,6 +502,13 @@ BOOL WaitWithMessageLoop(HANDLE hEvent, DWORD dwTimeout)
 	return FALSE;
 }
 
+/**
+ * @brief Handles the Cancel button click.
+ *
+ * If the crawling thread is still running, signals it to stop by clearing
+ * m_bThreadRunning and waits for the thread to terminate before closing
+ * the dialog.
+ */
 void CWebSearchEngineDlg::OnBnClickedCancel()
 {
 	if (m_bThreadRunning)
