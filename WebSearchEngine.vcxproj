@@ -229,6 +229,7 @@
     <ResourceCompile Include="WebSearchEngine.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="AGENTS.md" />
     <None Include="ReleaseNotes.html" />
     <None Include="res\WebSearchEngine.rc2" />
     <None Include="index.html" />

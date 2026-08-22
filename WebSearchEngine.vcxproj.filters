@@ -101,6 +101,7 @@
     </None>
     <None Include="ReleaseNotes.html" />
     <None Include="SoftwareContentRegister.html" />
+    <None Include="AGENTS.md" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico">
