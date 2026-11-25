@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Web Search Engine - Help</title>
+        <link rel="icon" type="image/png" href="https://www.moga.doctor/romania-flag-square-icon-256.png">
+        <link rel="apple-touch-icon" href="https://www.moga.doctor/romania-flag-square-icon-256.png">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="https://www.text-mining.ro/" target="_blank">Web Search Engine</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://github.com/mihaimoga/WebSearchEngine/graphs/contributors" target="_blank">Contributors</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://github.com/mihaimoga/WebSearchEngine/issues" target="_blank">Issues</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://github.com/mihaimoga/WebSearchEngine/discussions" target="_blank">Discussions</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="https://github.com/mihaimoga/WebSearchEngine/wiki" target="_blank">Wiki</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row divide-md">
+                <div class="col-md-12 col-sm-12 divide-md text-justify" style="text-align: justify;">
+                    <h1 class="text-center">WebSearchEngine</h1>
+                    <p class="text-center"><img class="img-thumbnail" src="WebSearchEngine.png" alt="WebSearchEngine"></p>
+                    <p class="text-center">Design and implementation of a <strong>Web Search Engine</strong> using <em>Text Mining techniques</em>.</p>
+
+                    <h2>Introduction</h2>
+                    <p><em>WebSearchEngine</em> is a free (as in &ldquo;free speech&rdquo; and also as in &ldquo;free beer&rdquo;) web crawler, indexer and search engine built around text-mining ideas. Running in the Microsoft Windows environment, its use is governed by <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License v3.0</a>. A C++/MFC desktop application crawls web pages, extracts their title and plain text, and stores the words they contain in a MySQL/MariaDB database through ODBC. Stored SQL functions weigh every word of every page with a TF-IDF style score, and a small PHP page answers search queries by ranking the indexed pages with these scores. A Python version of the crawler is included as well. This is a learning and demonstration project rather than a production search engine, so please read <a href="#known-limitations">Known limitations</a> before you point it at the web. The accompanying article is on <a href="https://www.codeproject.com/articles/Web-Search-Engine" target="_blank">CodeProject</a>.</p>
+
+                    <h2 id="how-it-works">How it works</h2>
+                    <ol>
+                        <li><strong>Crawl</strong>: the crawler starts at <code>https://en.wikipedia.org/</code> and keeps a <em>frontier</em> of the URLs it still has to visit. Whenever a link is found again its score grows by one, and the next page to download is the queued URL with the highest score (the one queued first wins a tie). Pages are downloaded to a temporary file with <code>URLDownloadToFile</code>.</li>
+                        <li><strong>Parse</strong>: the title is read from the <code>&lt;title&gt;</code> element, and the links found in <code>&lt;a href="&hellip;"&gt;</code> elements are resolved against the address of the page, stripped of their <code>#fragment</code> and added to the frontier. The HTML is converted to plain text: only the content of <code>&lt;body&gt;</code> is kept, and <code>script</code>, <code>noscript</code>, <code>style</code> and <code>object</code> elements and comments are left out.</li>
+                        <li><strong>Index</strong>: the text is lower-cased and split into words at spaces and punctuation. Each distinct word is stored once in the <code>keyword</code> table, and the <code>occurrence</code> table counts how many times it appears on each page.</li>
+                        <li><strong>Score</strong>: every 1,000 stored pages the crawler recomputes, with the <code>data_mining</code> SQL function, the relevance scores of the words it has met since the previous round (see <a href="#relevance-scoring">Relevance scoring</a>).</li>
+                        <li><strong>Search</strong>: <code>search.php</code> splits the query into words, keeps the pages that contain <strong>all</strong> of them, ranks these pages by the average score of the query words and shows the best 100, each with its title, score, address and the beginning of its text.</li>
+                    </ol>
+
+                    <h2>What is in the repository</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm text-start">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Component</th>
+                                    <th scope="col">Files</th>
+                                    <th scope="col">Role</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>C++/MFC crawler</td>
+                                    <td><code>WebSearchEngine.cpp</code>, <code>WebSearchEngineDlg.cpp</code>, <code>WebSearchEngineExt.cpp</code>, <code>ConnectionSettingsDlg.cpp</code></td>
+                                    <td>Application and main dialog with the crawling thread, crawler engine (frontier, download, parsing, indexing), database connection settings</td>
+                                </tr>
+                                <tr>
+                                    <td>HTML processing</td>
+                                    <td><code>HtmlToText.cpp</code>, <code>UnquoteHTML.cpp</code></td>
+                                    <td>HTML to plain text conversion and HTML entity decoding</td>
+                                </tr>
+                                <tr>
+                                    <td>Third-party classes</td>
+                                    <td><code>ODBCWrappers.h</code>, <code>HLinkCtrl.cpp</code>, <code>VersionInfo.cpp</code></td>
+                                    <td>PJ Naughter's ODBC wrappers, hyperlink control and version information classes</td>
+                                </tr>
+                                <tr>
+                                    <td>Database</td>
+                                    <td><code>search.sql</code></td>
+                                    <td>Stored functions <code>no_of_words</code>, <code>no_of_pages</code>, <code>total_pages</code> and <code>data_mining</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Web front-end</td>
+                                    <td><code>index.html</code>, <code>search.php</code></td>
+                                    <td>Search form and results page</td>
+                                </tr>
+                                <tr>
+                                    <td>Python crawler</td>
+                                    <td><code>WebSearchEngine.py</code></td>
+                                    <td>Stand-alone alternative to the C++ crawler</td>
+                                </tr>
+                                <tr>
+                                    <td>Documentation</td>
+                                    <td><code>README.md</code>, <code>WebSearchEngine.html</code>, <code>ReleaseNotes.html</code>, <code>SoftwareContentRegister.html</code></td>
+                                    <td>Overview, help page, release history, third-party software</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h2 id="getting-started">Getting started</h2>
+                    <h3>Prerequisites</h3>
+                    <ul>
+                        <li><strong>Windows</strong> with <strong>Visual Studio 2026</strong> (the project uses the <code>v145</code> platform toolset), the <strong>Desktop development with C++</strong> workload and the <strong>MFC</strong> component. To build with another Visual Studio version, retarget the project to a toolset you have installed.</li>
+                        <li>The <strong>MySQL Connector/ODBC 8.0</strong> series (<a href="https://dev.mysql.com/downloads/connector/odbc/" target="_blank">downloads</a>): the connection string asks for the driver named <code>MySQL ODBC 8.0 Unicode Driver</code>. Install the same bitness (x64 or x86) as the build you are going to run.</li>
+                        <li><strong>MariaDB 10.1.3 or later</strong>, because <code>search.sql</code> uses <code>CREATE OR REPLACE FUNCTION</code>. MySQL does not support that statement; to use MySQL, replace each one with <code>DROP FUNCTION IF EXISTS &hellip;</code> followed by <code>CREATE FUNCTION &hellip;</code>.</li>
+                        <li>A web server with <strong>PHP</strong> (7 or 8) and the <code>mysqli</code> extension, for the search page.</li>
+                        <li><strong>Python 3</strong> with <code>mysql-connector-python</code>, <code>beautifulsoup4</code> and <code>gensim</code>, only if you prefer the Python crawler.</li>
+                    </ul>
+
+                    <h3>1. Prepare the database</h3>
+                    <p>Create an empty database and an account for the crawler, for example:</p>
+                    <pre class="bg-body-tertiary border rounded p-3"><code>CREATE DATABASE TextMining;
+CREATE USER 'crawler'@'localhost' IDENTIFIED BY '&lt;a-strong-password&gt;';
+GRANT ALL PRIVILEGES ON TextMining.* TO 'crawler'@'localhost';</code></pre>
+                    <p>Then load the stored functions of <code>search.sql</code> into it. The first statement of that file (<code>CREATE UNIQUE INDEX &hellip;</code>) is run by the crawler itself once the tables exist, so skip it, or let it fail harmlessly with the <code>--force</code> option of the command-line client (run it from <code>cmd.exe</code> or a Unix shell, because PowerShell does not support <code>&lt;</code>):</p>
+                    <pre class="bg-body-tertiary border rounded p-3"><code>mysql --force -u crawler -p TextMining &lt; search.sql</code></pre>
+                    <p><code>SHOW FUNCTION STATUS WHERE Db = 'TextMining';</code> must list <code>no_of_words</code>, <code>no_of_pages</code>, <code>total_pages</code> and <code>data_mining</code>. The C++ crawler calls them for the first time when it stores its 1,000th page and stops with the error &ldquo;Cannot apply data mining to the database&rdquo; if they are missing.</p>
+
+                    <h3>2. Build and run the crawler</h3>
+                    <p>Open <code>WebSearchEngine.sln</code> in Visual Studio, or build from a Developer Command Prompt:</p>
+                    <pre class="bg-body-tertiary border rounded p-3"><code>msbuild WebSearchEngine.vcxproj /p:Configuration=Release /p:Platform=x64</code></pre>
+                    <p><code>Debug</code> and <code>Release</code> are available for both <code>x64</code> and <code>Win32</code>, and the executable is written to <code>x64\Release</code> (or <code>Release</code> for <code>Win32</code>). The repository does not contain compiled binaries, so you build the application yourself.</p>
+                    <p>Run <code>WebSearchEngine.exe</code>. It first shows the <strong>Database Connection Settings</strong> dialog (<strong>Server</strong>, <strong>Port</strong>, <strong>Database</strong>, <strong>Username</strong> and <strong>Password</strong>; the defaults are <code>localhost</code>, <code>3306</code>, <code>TextMining</code> and <code>root</code>). The settings are remembered for the current Windows user under <code>HKEY_CURRENT_USER\Software\Stefan-Mihai MOGA</code>, and the password is saved there as plain text.</p>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Warning:</strong> Every time it starts, the crawler <strong>drops and re-creates</strong> the <code>occurrence</code>, <code>keyword</code> and <code>webpage</code> tables, so the index of any previous run is lost. Use a database that holds nothing else you care about.
+                    </div>
+                    <p>Then it creates the tables, together with a unique index on <code>keyword(name)</code>, and starts crawling in a background thread. The dialog shows the address being crawled and the number of <strong>Pages</strong> and <strong>Words</strong> stored so far. The crawl ends when there are no URLs left to visit, or when you press <strong>Cancel</strong>.</p>
+
+                    <h3>3. Publish the search page</h3>
+                    <p>Copy <code>index.html</code> and <code>search.php</code> to a web server with PHP and the <code>mysqli</code> extension, and edit <code>search.php</code> so that <code>$servername</code>, <code>$username</code>, <code>$password</code> and <code>$dbname</code> point to your own database. The page only reads data, so give it an account that has just the <code>SELECT</code> privilege, and keep these credentials out of version control. Then open <code>index.html</code>, type a query and search.</p>
+
+                    <h3>Alternative: the Python crawler</h3>
+                    <p><code>WebSearchEngine.py</code> does the same job without Visual Studio, ODBC or <code>search.sql</code>: when it starts, it drops and re-creates the tables, adds a <code>frontier</code> table and creates the four stored functions itself.</p>
+                    <pre class="bg-body-tertiary border rounded p-3"><code>pip install mysql-connector-python beautifulsoup4 gensim</code></pre>
+                    <p>Set <code>HOSTNAME</code>, <code>DATABASE</code>, <code>USERNAME</code> and <code>PASSWORD</code> at the top of the script (and keep your real values out of version control), then run <code>python WebSearchEngine.py</code>. Compared with the C++ crawler:</p>
+                    <ul>
+                        <li>the frontier lives in the <code>frontier</code> table, and the crawl ends when no unvisited URL is left;</li>
+                        <li>links that end with one of dozens of non-HTML file extensions (archives, images, audio, video, documents, fonts, executables and so on) are not queued;</li>
+                        <li>the text is split with Gensim's tokenizer, and the words made only of ASCII letters and digits are indexed;</li>
+                        <li>every 1,000 stored pages, the scores of all the words are refreshed.</li>
+                    </ul>
+
+                    <h2 id="data-model">Data model</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm text-start">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Table</th>
+                                    <th scope="col">Columns</th>
+                                    <th scope="col">Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>webpage</code></td>
+                                    <td><code>webpage_id</code>, <code>url</code>, <code>title</code>, <code>content</code></td>
+                                    <td>One row per crawled page (the C++ crawler keeps at most 65,535 characters of text)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>keyword</code></td>
+                                    <td><code>keyword_id</code>, <code>name</code></td>
+                                    <td>One row per distinct word, with a unique index on <code>name</code></td>
+                                </tr>
+                                <tr>
+                                    <td><code>occurrence</code></td>
+                                    <td><code>webpage_id</code>, <code>keyword_id</code>, <code>counter</code>, <code>pagerank</code></td>
+                                    <td>How many times a word appears on a page (<code>counter</code>) and the relevance score of that word on that page (<code>pagerank</code>)</td>
+                                </tr>
+                                <tr>
+                                    <td><code>frontier</code></td>
+                                    <td><code>url_id</code>, <code>address</code>, <code>visited</code>, <code>score</code></td>
+                                    <td>Python crawler only: the URLs waiting to be crawled (the C++ crawler keeps its frontier in memory)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h2 id="relevance-scoring">Relevance scoring</h2>
+                    <p>For every word of every page, the <code>data_mining</code> function of <code>search.sql</code> computes:</p>
+                    <pre class="bg-body-tertiary border rounded p-3"><code>score(page, word) = counter(page, word) / no_of_words(word)
+                    * LOG((1 + total_pages()) / no_of_pages(word))</code></pre>
+                    <p><code>counter</code> is the number of times the word appears on the page, <code>no_of_words</code> is the highest <code>counter</code> of that word on any page, <code>total_pages</code> is the number of indexed pages and <code>no_of_pages</code> is the number of pages that contain the word. The first factor is the term frequency and the second one the inverse document frequency (<code>LOG</code> is the natural logarithm), so a word that is frequent on a page but rare in the index weighs the most. The score is stored in <code>occurrence.pagerank</code>; despite its name, it has nothing to do with the link-based PageRank algorithm. A search ranks the pages by the average score of the query words.</p>
+                    <p>Scores are computed in batches: every 1,000 stored pages, the C++ crawler refreshes the scores of the words it has met since the previous batch, and the Python crawler refreshes all of them. They are therefore approximate while a crawl is running, and the pages stored after the last batch keep the score 0, because nothing is recomputed when the crawl ends.</p>
+
+                    <h2 id="known-limitations">Known limitations</h2>
+                    <ul>
+                        <li><strong>No <code>robots.txt</code>, no politeness</strong>: neither crawler reads <code>robots.txt</code> or pauses between requests, and both start from <code>https://en.wikipedia.org/</code>. Only crawl sites you are allowed to crawl, at a rate their owners accept.</li>
+                        <li><strong>A fresh index on every start</strong>: both crawlers drop the existing tables, and the C++ crawler keeps its frontier in memory, so a stopped crawl cannot be resumed.</li>
+                        <li><strong>English-oriented parsing in the C++ crawler</strong>: only the words made of the letters a&ndash;z are indexed (numbers, accented and non-Latin words are dropped), a page is skipped unless it has a plain <code>&lt;title&gt;&hellip;&lt;/title&gt;</code> element, only the links written exactly as <code>&lt;a href="&hellip;"&gt;</code> are followed, and the content type is not checked.</li>
+                        <li><strong>Speed</strong>: each crawler runs a single crawling thread, and the C++ crawler scans its frontier, visited URLs and known words linearly, so it slows down as they grow.</li>
+                        <li><strong>Windows only</strong>: the C++ crawler needs Windows (MFC and ODBC), while the PHP page and the Python crawler run elsewhere as well.</li>
+                        <li><strong>Credentials and security</strong>: the C++ application saves the database password as plain text (the optional encryption code, <code>USE_CRYPTO_METHODS</code>, is switched off), and <code>search.php</code> and <code>WebSearchEngine.py</code> keep the database credentials in the source. <code>search.php</code> is a demonstration: it builds its SQL statement from the query text and prints titles, addresses and page text without escaping them, and the Python crawler formats its SQL statements as strings. Review and harden them before you expose them to untrusted users, never commit real credentials, and report vulnerabilities as described in <a href="https://github.com/mihaimoga/WebSearchEngine/blob/main/SECURITY.md" target="_blank">SECURITY.md</a>.</li>
+                    </ul>
+
+                    <h2 id="roadmap">Roadmap</h2>
+                    <p>This roadmap outlines where <em>WebSearchEngine</em> is heading. Today it is a crawler, an indexer and a small search page that show how text mining can rank web pages, and the roadmap builds on that: it brings together the next steps for the features that are already there, ideas for new ones, and the maintenance work that goes into every update. Items are grouped by horizon rather than by date, and their order may change as feedback arrives, so please treat it as a statement of intent, not a promise. For everything that has already shipped, see the <a href="ReleaseNotes.html">Release Notes</a>.</p>
+                    <p class="text-body-secondary"><small>Last reviewed: November 2026.</small></p>
+
+                    <h3>Now <small class="text-body-secondary fw-normal">in progress and ongoing</small></h3>
+                    <ul>
+                        <li><strong>Up-to-date components</strong>: updates keep picking up the latest versions of PJ Naughter's <code>ODBCWrappers</code>, <code>CHLinkCtrl</code> and <code>CVersionInfo</code> classes (the most recent update, of <code>ODBCWrappers</code>, was in March 2026) and the latest Visual Studio toolset.</li>
+                        <li><strong>Stability, security and performance</strong>: bug fixes, security updates and performance tuning continue alongside new features. Bug reports for different MySQL/MariaDB servers and ODBC driver versions are especially welcome.</li>
+                    </ul>
+
+                    <h3>Next <small class="text-body-secondary fw-normal">planned, next in line</small></h3>
+                    <ul>
+                        <li><strong>Respect <code>robots.txt</code></strong>: read and obey the <code>robots.txt</code> file of every site (including <code>Crawl-delay</code>) and wait between two requests to the same site. Neither crawler does this today.</li>
+                        <li><strong>Resumable crawls</strong>: make dropping the tables optional and keep the frontier in the database, as the Python crawler already does, so that a stopped crawl can be continued instead of started over.</li>
+                        <li><strong>Configurable start</strong>: choose the start addresses and the limits of a crawl (maximum number of pages, allowed sites) instead of the fixed <code>https://en.wikipedia.org/</code>.</li>
+                        <li><strong>Final scoring pass</strong>: refresh the relevance scores when a crawl stops, so that the pages stored after the last batch of 1,000 are ranked as well.</li>
+                    </ul>
+
+                    <h3>Later <small class="text-body-secondary fw-normal">planned, larger efforts</small></h3>
+                    <ul>
+                        <li><strong>Unicode-aware indexing</strong>: index numbers, accented and non-Latin words (the C++ crawler keeps only the words made of the letters a&ndash;z today), and add stop words and stemming.</li>
+                        <li><strong>A safer and richer search page</strong>: prepared statements and escaped output in <code>search.php</code>, credentials kept outside the script, paging beyond the first 100 results, and a snippet around the matching words instead of the first 1,024 characters of the page.</li>
+                        <li><strong>Faster crawling</strong>: hash-based lookups for the frontier, the visited URLs and the known words, and several crawling threads with a per-site limit, so that large crawls do not slow down.</li>
+                        <li><strong>Protected settings</strong>: save the database password protected (for example with the Windows Data Protection API) instead of as plain text in the registry.</li>
+                    </ul>
+
+                    <h3>Under consideration <small class="text-body-secondary fw-normal">ideas, not yet committed</small></h3>
+                    <ul>
+                        <li><strong>Link-based ranking</strong>: combine the word scores with a score computed from the links the crawler already collects. The <code>pagerank</code> column is a TF-IDF score today, not a link-analysis one.</li>
+                        <li><strong>Phrase and boolean queries</strong>: quoted phrases and <code>OR</code>/<code>NOT</code> operators (a query needs all its words today), possibly backed by MariaDB full-text indexes.</li>
+                        <li><strong>One schema definition</strong>: share a single definition of the tables and functions between the C++ crawler, the Python crawler and <code>search.sql</code> (the same SQL is duplicated in three places today), including a variant of the functions that MySQL accepts.</li>
+                        <li><strong>ARM64 and automated builds</strong>: a native ARM64 build (the project is built for x86 and x64 today) and a GitHub Actions workflow that builds every pull request, since there is no continuous integration yet.</li>
+                    </ul>
+
+                    <h3>Help shape the roadmap</h3>
+                    <p>Want to see something sooner, or have an idea that is not listed here? <a href="https://github.com/mihaimoga/WebSearchEngine/issues" target="_blank">Open an issue</a> or start a conversation in <a href="https://github.com/mihaimoga/WebSearchEngine/discussions" target="_blank">Discussions</a>. Contributions are welcome as well: any item above can be picked up through a pull request, as described in the next section.</p>
+
+                    <h2>Create and Submit your Pull Request</h2>
+                    <p>The first step is to create an <a href="https://github.com/mihaimoga/WebSearchEngine/issues" target="_blank">issue</a> on GitHub that describes the bug to fix or the improvement to make; in your issue, be sure to explain that you are going to submit a pull request. The second step is to fork the repository, commit your changes to your fork and use the GitHub interface to create the pull request from your fork into the main repository. The final step is to wait for and respond to feedback from the developers as needed, until such time as your pull request is accepted or rejected. Please follow the <a href="https://github.com/mihaimoga/WebSearchEngine/blob/main/CODE_OF_CONDUCT.md" target="_blank">Code of Conduct</a>, and report any security vulnerability privately, as described in <a href="https://github.com/mihaimoga/WebSearchEngine/blob/main/SECURITY.md" target="_blank">SECURITY.md</a>, instead of opening a public issue.</p>
+
+                    <h2 id="acknowledges">Acknowledges</h2>
+                    <ul>
+                        <li><a href="https://www.naughter.com/hlinkctrl.html" target="_blank">CHLinkCtrl</a>, <a href="https://www.naughter.com/odbcwrappers.html" target="_blank">ODBCWrappers</a> and <a href="https://www.naughter.com/versioninfo.html" target="_blank">CVersionInfo</a>: PJ Naughter's hyperlink control, ODBC wrappers and version information classes, used by the C++ application. See the <a href="SoftwareContentRegister.html">Software Content Register</a> for the details.</li>
+                        <li><a href="https://getbootstrap.com/" target="_blank">Bootstrap</a>: the CSS framework used by <code>index.html</code>, <code>search.php</code> and the HTML documentation pages.</li>
+                        <li><a href="https://www.crummy.com/software/BeautifulSoup/" target="_blank">Beautiful Soup</a>, <a href="https://radimrehurek.com/gensim/" target="_blank">Gensim</a> and <a href="https://dev.mysql.com/doc/connector-python/en/" target="_blank">MySQL Connector/Python</a>: used by the Python crawler.</li>
+                    </ul>
+
+                    <h2>Demo</h2>
+                    <p>Visit <a href="https://text-mining.ro/" target="_blank"><code>text-mining.ro</code></a> for a live demonstration.</p>
+
+                    <h2>License</h2>
+                    <p>This project is licensed under the GNU General Public License v3.0 - see the <a href="https://github.com/mihaimoga/WebSearchEngine/blob/main/LICENSE" target="_blank">LICENSE</a> file for details.</p>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    </body>
+</html>

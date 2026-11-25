@@ -194,9 +194,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="ConnectionSettingsDlg.h" />
     <ClInclude Include="HLinkCtrl.h" />
     <ClInclude Include="HtmlToText.h" />
@@ -230,12 +227,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="AGENTS.md" />
+    <None Include="README.md" />
     <None Include="ReleaseNotes.html" />
     <None Include="res\WebSearchEngine.rc2" />
     <None Include="index.html" />
     <None Include="search.php" />
     <None Include="search.sql" />
     <None Include="SoftwareContentRegister.html" />
+    <None Include="WebSearchEngine.html" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico" />

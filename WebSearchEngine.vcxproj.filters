@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="WebSearchEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -102,6 +99,8 @@
     <None Include="ReleaseNotes.html" />
     <None Include="SoftwareContentRegister.html" />
     <None Include="AGENTS.md" />
+    <None Include="WebSearchEngine.html" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico">
