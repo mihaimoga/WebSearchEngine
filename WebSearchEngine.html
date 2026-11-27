@@ -47,7 +47,7 @@
                     <h2 id="how-it-works">How it works</h2>
                     <ol>
                         <li><strong>Crawl</strong>: the crawler starts at <code>https://en.wikipedia.org/</code> and keeps a <em>frontier</em> of the URLs it still has to visit. Whenever a link is found again its score grows by one, and the next page to download is the queued URL with the highest score (the one queued first wins a tie). Pages are downloaded to a temporary file with <code>URLDownloadToFile</code>.</li>
-                        <li><strong>Parse</strong>: the title is read from the <code>&lt;title&gt;</code> element, and the links found in <code>&lt;a href="&hellip;"&gt;</code> elements are resolved against the address of the page, stripped of their <code>#fragment</code> and added to the frontier. The HTML is converted to plain text: only the content of <code>&lt;body&gt;</code> is kept, and <code>script</code>, <code>noscript</code>, <code>style</code> and <code>object</code> elements and comments are left out.</li>
+                        <li><strong>Parse</strong>: the title is read from the <code>&lt;title&gt;</code> element, and the links found in <code>&lt;a href="&hellip;"&gt;</code> elements are resolved against the address of the page, stripped of their <code>#fragment</code> and added to the frontier. The HTML is converted to plain text: tags and comments are removed, elements that are not displayed (<code>title</code>, <code>script</code>, <code>style</code>, <code>noscript</code>, <code>template</code>, <code>object</code>, <code>svg</code>, &hellip;) are removed together with their content, and the rest is kept, with a line break wherever a block element starts and without splitting a word at inline tags such as <code>&lt;b&gt;</code>. The character references that remain in the text, such as <code>&amp;amp;</code>, <code>&amp;eacute;</code> and <code>&amp;#8364;</code>, are then decoded as a browser does (every named reference of the HTML Living Standard is known), and the no-break space and the other Unicode spaces become ordinary spaces.</li>
                         <li><strong>Index</strong>: the text is lower-cased and split into words at spaces and punctuation. Each distinct word is stored once in the <code>keyword</code> table, and the <code>occurrence</code> table counts how many times it appears on each page.</li>
                         <li><strong>Score</strong>: every 1,000 stored pages the crawler recomputes, with the <code>data_mining</code> SQL function, the relevance scores of the words it has met since the previous round (see <a href="#relevance-scoring">Relevance scoring</a>).</li>
                         <li><strong>Search</strong>: <code>search.php</code> splits the query into words, keeps the pages that contain <strong>all</strong> of them, ranks these pages by the average score of the query words and shows the best 100, each with its title, score, address and the beginning of its text.</li>
@@ -71,8 +71,13 @@
                                 </tr>
                                 <tr>
                                     <td>HTML processing</td>
-                                    <td><code>HtmlToText.cpp</code>, <code>UnquoteHTML.cpp</code></td>
-                                    <td>HTML to plain text conversion and HTML entity decoding</td>
+                                    <td><code>HtmlToText.cpp</code>, <code>UnquoteHTML.cpp</code>, <code>HtmlEntities.h</code></td>
+                                    <td>HTML to plain text conversion and decoding of the HTML character references, with the table of the names generated from the HTML Living Standard by <code>GenerateHtmlEntities.py</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Text encoding</td>
+                                    <td><code>Utf8.cpp</code></td>
+                                    <td>Conversion between UTF-8 and the UTF-16 strings of Windows and of the database (<code>utf8_to_wstring</code>, <code>wstring_to_utf8</code>), written with the C++20/23 library because <code>&lt;codecvt&gt;</code> is deprecated and C++26 removes it</td>
                                 </tr>
                                 <tr>
                                     <td>Third-party classes</td>

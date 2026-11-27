@@ -196,11 +196,14 @@
   <ItemGroup>
     <ClInclude Include="ConnectionSettingsDlg.h" />
     <ClInclude Include="HLinkCtrl.h" />
+    <ClInclude Include="HtmlEntities.h" />
     <ClInclude Include="HtmlToText.h" />
     <ClInclude Include="ODBCWrappers.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="UnquoteHTML.h" />
+    <ClInclude Include="Utf8.h" />
     <ClInclude Include="VersionInfo.h" />
     <ClInclude Include="WebSearchEngine.h" />
     <ClInclude Include="WebSearchEngineDlg.h" />
@@ -217,6 +220,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="UnquoteHTML.cpp" />
+    <ClCompile Include="Utf8.cpp" />
     <ClCompile Include="VersionInfo.cpp" />
     <ClCompile Include="WebSearchEngine.cpp" />
     <ClCompile Include="WebSearchEngineDlg.cpp" />
@@ -227,6 +231,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="AGENTS.md" />
+    <None Include="GenerateHtmlEntities.py" />
     <None Include="README.md" />
     <None Include="ReleaseNotes.html" />
     <None Include="res\WebSearchEngine.rc2" />

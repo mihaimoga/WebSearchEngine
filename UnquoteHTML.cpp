@@ -12,480 +12,399 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 You should have received a copy of the GNU General Public License along with
 WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 
+/**
+ * @file UnquoteHTML.cpp
+ * @brief Decodes the character references of an HTML text.
+ *
+ * The decoding follows the character reference state of the tokenizer of the HTML Living Standard
+ * (https://html.spec.whatwg.org/multipage/parsing.html#character-reference-state), which is the
+ * one that applies to the text of an element, and the table of the named character references of
+ * the standard (see HtmlEntities.h).
+ */
+
 #include "stdafx.h"
+#include "UnquoteHTML.h"
+#include "HtmlEntities.h"
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <string>
+#include <string_view>
 
-// https://brajeshwar.github.io/entities/
-
-typedef struct
+namespace
 {
-	const char * Name;
-	unsigned int Value;
-} EntityNameEntry;
+	/** @brief The UTF-8 encoding of U+FFFD, which replaces every malformed byte. */
+	constexpr std::string_view kReplacementBytes("\xEF\xBF\xBD", 3);
 
-static const EntityNameEntry StaticEntityNames[] =
-/* list of entity names defined in HTML 4.0 spec */
-{
-	{ "nbsp", /*160*/32 },
-	{ "iexcl", 161 },
-	{ "cent", 162 },
-	{ "pound", 163 },
-	{ "curren", 164 },
-	{ "yen", 165 },
-	{ "brvbar", 166 },
-	{ "sect", 167 },
-	{ "uml", 168 },
-	{ "copy", 169 },
-	{ "ordf", 170 },
-	{ "laquo", 171 },
-	{ "not", 172 },
-	{ "shy", 173 },
-	{ "reg", 174 },
-	{ "macr", 175 },
-	{ "deg", 176 },
-	{ "plusmn", 177 },
-	{ "sup2", 178 },
-	{ "sup3", 179 },
-	{ "acute", 180 },
-	{ "micro", 181 },
-	{ "para", 182 },
-	{ "middot", 183 },
-	{ "cedil", 184 },
-	{ "sup1", 185 },
-	{ "ordm", 186 },
-	{ "raquo", 187 },
-	{ "frac14", 188 },
-	{ "frac12", 189 },
-	{ "frac34", 190 },
-	{ "iquest", 191 },
-	{ "Agrave", 192 },
-	{ "Aacute", 193 },
-	{ "Acirc", 194 },
-	{ "Atilde", 195 },
-	{ "Auml", 196 },
-	{ "Aring", 197 },
-	{ "AElig", 198 },
-	{ "Ccedil", 199 },
-	{ "Egrave", 200 },
-	{ "Eacute", 201 },
-	{ "Ecirc", 202 },
-	{ "Euml", 203 },
-	{ "Igrave", 204 },
-	{ "Iacute", 205 },
-	{ "Icirc", 206 },
-	{ "Iuml", 207 },
-	{ "ETH", 208 },
-	{ "Ntilde", 209 },
-	{ "Ograve", 210 },
-	{ "Oacute", 211 },
-	{ "Ocirc", 212 },
-	{ "Otilde", 213 },
-	{ "Ouml", 214 },
-	{ "times", 215 },
-	{ "Oslash", 216 },
-	{ "Ugrave", 217 },
-	{ "Uacute", 218 },
-	{ "Ucirc", 219 },
-	{ "Uuml", 220 },
-	{ "Yacute", 221 },
-	{ "THORN", 222 },
-	{ "szlig", 223 },
-	{ "agrave", 224 },
-	{ "aacute", 225 },
-	{ "acirc", 226 },
-	{ "atilde", 227 },
-	{ "auml", 228 },
-	{ "aring", 229 },
-	{ "aelig", 230 },
-	{ "ccedil", 231 },
-	{ "egrave", 232 },
-	{ "eacute", 233 },
-	{ "ecirc", 234 },
-	{ "euml", 235 },
-	{ "igrave", 236 },
-	{ "iacute", 237 },
-	{ "icirc", 238 },
-	{ "iuml", 239 },
-	{ "eth", 240 },
-	{ "ntilde", 241 },
-	{ "ograve", 242 },
-	{ "oacute", 243 },
-	{ "ocirc", 244 },
-	{ "otilde", 245 },
-	{ "ouml", 246 },
-	{ "divide", 247 },
-	{ "oslash", 248 },
-	{ "ugrave", 249 },
-	{ "uacute", 250 },
-	{ "ucirc", 251 },
-	{ "uuml", 252 },
-	{ "yacute", 253 },
-	{ "thorn", 254 },
-	{ "yuml", 255 },
-	{ "fnof", 402 },
-	/* Greek */
-	{ "Alpha", 913 },
-	{ "Beta", 914 },
-	{ "Gamma", 915 },
-	{ "Delta", 916 },
-	{ "Epsilon", 917 },
-	{ "Zeta", 918 },
-	{ "Eta", 919 },
-	{ "Theta", 920 },
-	{ "Iota", 921 },
-	{ "Kappa", 922 },
-	{ "Lambda", 923 },
-	{ "Mu", 924 },
-	{ "Nu", 925 },
-	{ "Xi", 926 },
-	{ "Omicron", 927 },
-	{ "Pi", 928 },
-	{ "Rho", 929 },
-	{ "Sigma", 931 },
-	{ "Tau", 932 },
-	{ "Upsilon", 933 },
-	{ "Phi", 934 },
-	{ "Chi", 935 },
-	{ "Psi", 936 },
-	{ "Omega", 937 },
-	{ "alpha", 945 },
-	{ "beta", 946 },
-	{ "gamma", 947 },
-	{ "delta", 948 },
-	{ "epsilon", 949 },
-	{ "zeta", 950 },
-	{ "eta", 951 },
-	{ "theta", 952 },
-	{ "iota", 953 },
-	{ "kappa", 954 },
-	{ "lambda", 955 },
-	{ "mu", 956 },
-	{ "nu", 957 },
-	{ "xi", 958 },
-	{ "omicron", 959 },
-	{ "pi", 960 },
-	{ "rho", 961 },
-	{ "sigmaf", 962 },
-	{ "sigma", 963 },
-	{ "tau", 964 },
-	{ "upsilon", 965 },
-	{ "phi", 966 },
-	{ "chi", 967 },
-	{ "psi", 968 },
-	{ "omega", 969 },
-	{ "thetasym", 977 },
-	{ "upsih", 978 },
-	{ "piv", 982 },
-	/* General Punctuation */
-	{ "bull", 8226 },
-	{ "hellip", 8230 },
-	{ "prime", 8242 },
-	{ "Prime", 8243 },
-	{ "oline", 8254 },
-	{ "frasl", 8260 },
-	/* Letterlike Symbols */
-	{ "weierp", 8472 },
-	{ "image", 8465 },
-	{ "real", 8476 },
-	{ "trade", 8482 },
-	{ "alefsym", 8501 },
-	/* Arrows */
-	{ "larr", 8592 },
-	{ "uarr", 8593 },
-	{ "rarr", 8594 },
-	{ "darr", 8595 },
-	{ "harr", 8596 },
-	{ "crarr", 8629 },
-	{ "lArr", 8656 },
-	{ "uArr", 8657 },
-	{ "rArr", 8658 },
-	{ "dArr", 8659 },
-	{ "hArr", 8660 },
-	/* Mathematical Operators */
-	{ "forall", 8704 },
-	{ "part", 8706 },
-	{ "exist", 8707 },
-	{ "empty", 8709 },
-	{ "nabla", 8711 },
-	{ "isin", 8712 },
-	{ "notin", 8713 },
-	{ "ni", 8715 },
-	{ "prod", 8719 },
-	{ "sum", 8721 },
-	{ "minus", 8722 },
-	{ "lowast", 8727 },
-	{ "radic", 8730 },
-	{ "prop", 8733 },
-	{ "infin", 8734 },
-	{ "and", 8743 },
-	{ "or", 8744 },
-	{ "cap", 8745 },
-	{ "cup", 8746 },
-	{ "int", 8747 },
-	{ "there4", 8756 },
-	{ "sim", 8764 },
-	{ "cong", 8773 },
-	{ "asymp", 8776 },
-	{ "ne", 8800 },
-	{ "equiv", 8801 },
-	{ "le", 8804 },
-	{ "ge", 8805 },
-	{ "sub", 8834 },
-	{ "sup", 8835 },
-	{ "nsub", 8836 },
-	{ "sube", 8838 },
-	{ "supe", 8839 },
-	{ "oplus", 8853 },
-	{ "otimes", 8855 },
-	{ "perp", 8869 },
-	{ "sdot", 8901 },
-	/* Miscellaneous Technical */
-	{ "lceil", 8968 },
-	{ "rceil", 8969 },
-	{ "lfloor", 8970 },
-	{ "rfloor", 8971 },
-	{ "lang", 9001 },
-	{ "rang", 9002 },
-	/* Geometric Shapes */
-	{ "loz", 9674 },
-	/* Miscellaneous Symbols */
-	{ "spades", 9824 },
-	{ "clubs", 9827 },
-	{ "hearts", 9829 },
-	{ "diams", 9830 },
-	{ "quot", 34 },
-	{ "amp", 38 },
-	{ "lt", 60 },
-	{ "gt", 62 },
-	/* Latin Extended-A */
-	{ "OElig", 338 },
-	{ "oelig", 339 },
-	{ "Scaron", 352 },
-	{ "scaron", 353 },
-	{ "Yuml", 376 },
-	/* Spacing Modifier Letters */
-	{ "circ", 710 },
-	{ "tilde", 732 },
-	/* General Punctuation */
-	{ "ensp", 8194 },
-	{ "emsp", 8195 },
-	{ "thinsp", 8201 },
-	{ "zwnj", 8204 },
-	{ "zwj", 8205 },
-	{ "lrm", 8206 },
-	{ "rlm", 8207 },
-	{ "ndash", 8211 },
-	{ "mdash", 8212 },
-	{ "lsquo", 8216 },
-	{ "rsquo", 8217 },
-	{ "sbquo", 8218 },
-	{ "ldquo", 8220 },
-	{ "rdquo", 8221 },
-	{ "bdquo", 8222 },
-	{ "dagger", 8224 },
-	{ "Dagger", 8225 },
-	{ "permil", 8240 },
-	{ "lsaquo", 8249 },
-	{ "rsaquo", 8250 },
-	{ "euro", 8364 },
-	{ nullptr, 0 } /* marks end of list */
-} /*StaticEntityNames*/;
+	/** @brief The character U+FFFD, which stands for the numbers that are not a character. */
+	constexpr char32_t kReplacementCharacter = 0xFFFD;
 
-typedef std::map<std::string, unsigned int> EntityNameMap;
-typedef std::pair<std::string, unsigned int> EntityNamePair;
-static EntityNameMap EntityNames;
+	/** @brief The largest code point. */
+	constexpr char32_t kMaxCodePoint = 0x10FFFF;
 
-/* writes Ch in UTF-8 encoding to Out. Note this version only deals with characters up to 16 bits. */
-static void WriteUTF8(std::string& Out, unsigned int Ch)
-{
-	if (Ch >= 0x800)
+	/** @brief The lengths of the names in the table of the references. */
+	struct NameLengths
 	{
-		Out += (0xE0 | Ch >> 12 & 0x0F);
-		Out += (0x80 | Ch >> 6 & 0x3F);
-		Out += (0x80 | Ch & 0x3F);
-	}
-	else if (Ch >= 0x80)
-	{
-		Out += (0xC0 | Ch >> 6 & 0x1F);
-		Out += (0x80 | Ch & 0x3F);
-	}
-	else
-	{
-		Out += (char)Ch;
-	} /*if*/
-} /*WriteUTF8*/
+		size_t longest;			/**< The longest name; a name that is followed by a semicolon cannot be longer. */
+		size_t longestLegacy;	/**< The longest name that is valid without a semicolon. */
+		size_t shortestLegacy;	/**< The shortest name that is valid without a semicolon. */
+	};
 
-/* copies In to Out, expanding any HTML entity references into literal UTF-8 characters. */
-const std::string UnquoteHTML(const std::string& InBuffer)
-{
-	enum
+	/**
+	 * @brief Measures the names in the table of the references.
+	 * @return The lengths of the names.
+	 */
+	constexpr NameLengths MeasureNames() noexcept
 	{
-		NoMatch,
-		MatchBegin,
-		MatchName,
-		MatchNumber,
-		MatchDecimalNumber,
-		MatchHexNumber,
-	} MatchState;
-	std::string MatchingName;
-	unsigned int CharCode = 0;
-	bool ProcessedChar, GotCharCode;
-	MatchState = NoMatch;
-	std::string OutBuffer;
-	for (size_t index = 0; index < InBuffer.length(); index++)
-	{
-		const unsigned char ThisCh = InBuffer[index];
-		ProcessedChar = false; /* to begin with */
-		GotCharCode = false; /* to begin with */
-		switch (MatchState)
+		NameLengths lengths = { 0, 0, 0 };
+		for (const HtmlEntity& entity : kHtmlEntities)
 		{
-			case MatchBegin:
+			const size_t size = entity.name.size();
+			if (size > lengths.longest)
+				lengths.longest = size;
+			if (entity.legacy)
 			{
-				if (ThisCh == '#')
-				{
-					MatchState = MatchNumber;
-					ProcessedChar = true;
-				}
-				else if ((ThisCh >= 'a') && (ThisCh <= 'z')
-					|| (ThisCh >= 'A') && (ThisCh <= 'Z'))
-				{
-					MatchingName.append(1, ThisCh);
-					MatchState = MatchName;
-					ProcessedChar = true;
-				}
-				else
-				{
-					OutBuffer += '&';
-					MatchState = NoMatch;
-				} /*if*/
-				break;
+				if (size > lengths.longestLegacy)
+					lengths.longestLegacy = size;
+				if ((lengths.shortestLegacy == 0) || (size < lengths.shortestLegacy))
+					lengths.shortestLegacy = size;
 			}
-			case MatchName:
-			{
-				if ((ThisCh >= 'a') && (ThisCh <= 'z')
-					|| (ThisCh >= 'A') && (ThisCh <= 'Z')
-					|| (ThisCh >= '0') && (ThisCh <= '9'))
-				{
-					MatchingName.append(1, ThisCh);
-					ProcessedChar = true;
-				}
-				else if (ThisCh == ';')
-				{
-					if (EntityNames.empty())
-					{
-						/* first use, load EntityNames from StaticEntityNames */
-						const EntityNameEntry* ThisEntry;
-						ThisEntry = StaticEntityNames;
-						for (;;)
-						{
-							if (ThisEntry->Name == nullptr)
-								break;
-							EntityNames.insert(EntityNamePair(std::string(ThisEntry->Name), ThisEntry->Value));
-							++ThisEntry;
-						} /*for*/
-					} /*if*/
-					const EntityNameMap::const_iterator NameEntry = EntityNames.find(MatchingName);
-					if (NameEntry != EntityNames.end())
-					{
-						CharCode = NameEntry->second;
-						ProcessedChar = true;
-						GotCharCode = true;
-					} /*if*/
-				} /*if*/
-				if (!ProcessedChar)
-				{
-					OutBuffer += '&';
-					for (unsigned int i = 0; i < MatchingName.size(); ++i)
-					{
-						OutBuffer += MatchingName[i];
-					} /*for*/
-					MatchState = NoMatch;
-				} /*if*/
-				break;
-			}
-			case MatchNumber:
-			{
-				if ((ThisCh == 'x') || (ThisCh == 'X'))
-				{
-					ProcessedChar = true;
-					MatchState = MatchHexNumber;
-					CharCode = 0;
-				}
-				else if ((ThisCh >= '0') && (ThisCh <= '9'))
-				{
-					CharCode = ThisCh - '0';
-					MatchState = MatchDecimalNumber;
-					ProcessedChar = true;
-				}
-				else
-				{
-					MatchState = NoMatch;
-				} /*if*/
-				break;
-			}
-			case MatchDecimalNumber:
-			{
-				if ((ThisCh >= '0') && (ThisCh <= '9'))
-				{
-					CharCode = CharCode * 10 + ThisCh - '0';
-					ProcessedChar = true;
-				}
-				else if (ThisCh == ';')
-				{
-					ProcessedChar = true;
-					GotCharCode = true;
-				}
-				else
-				{
-					MatchState = NoMatch;
-				} /*if*/
-				break;
-			}
-			case MatchHexNumber:
-			{
-				if ((ThisCh >= '0') && (ThisCh <= '9'))
-				{
-					CharCode = CharCode * 16 + ThisCh - '0';
-					ProcessedChar = true;
-				}
-				else if ((ThisCh >= 'a') && (ThisCh <= 'f'))
-				{
-					CharCode = CharCode * 16 + ThisCh - 'a' + 10;
-					ProcessedChar = true;
-				}
-				else if ((ThisCh >= 'A') && (ThisCh <= 'F'))
-				{
-					CharCode = CharCode * 16 + ThisCh - 'A' + 10;
-					ProcessedChar = true;
-				}
-				else if (ThisCh == ';')
-				{
-					ProcessedChar = true;
-					GotCharCode = true;
-				}
-				else
-				{
-					MatchState = NoMatch;
-				} /*if*/
-				break;
-			}
-		} /*switch*/
-		if (GotCharCode)
-		{
-			WriteUTF8(OutBuffer, CharCode);
-			MatchState = NoMatch;
 		}
-		else if (!ProcessedChar && (MatchState == NoMatch))
+		return lengths;
+	}
+
+	/** @brief The lengths of the names in kHtmlEntities. */
+	constexpr NameLengths kNameLengths = MeasureNames();
+
+	/**
+	 * @brief Checks the table of the references: the search needs the names sorted, without duplicates.
+	 * @return true when the table can be searched.
+	 */
+	constexpr bool IsTableValid() noexcept
+	{
+		for (size_t index = 0; index < std::size(kHtmlEntities); ++index)
 		{
-			if (ThisCh == '&')
+			const HtmlEntity& entity = kHtmlEntities[index];
+			if (entity.name.empty() || (entity.first == 0))
+				return false;
+			if ((index > 0) && !(kHtmlEntities[index - 1].name < entity.name))
+				return false;
+		}
+		return kNameLengths.shortestLegacy != 0;
+	}
+
+	static_assert(IsTableValid(), "kHtmlEntities must be sorted by name, without duplicates, and must have legacy names");
+
+	/**
+	 * @brief The characters the numeric references 128 to 159 stand for.
+	 *
+	 * Browsers do not decode them as the C1 control characters, which nobody means, but as the
+	 * characters of Windows-1252, the code page the pages that use them were written in. The five
+	 * numbers that Windows-1252 does not assign stay what they are.
+	 */
+	constexpr char16_t kWindows1252[32] =
+	{
+		0x20AC, 0x0081, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+		0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008D, 0x017D, 0x008F,
+		0x0090, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+		0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x009D, 0x017E, 0x0178
+	};
+
+	/**
+	 * @brief Tells whether a character is an ASCII letter or digit, which is what the names are made of.
+	 * @param ch The character.
+	 * @return true for an ASCII letter or digit.
+	 */
+	constexpr bool IsAsciiAlphanumeric(char ch) noexcept
+	{
+		return ((ch >= '0') && (ch <= '9')) || ((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z'));
+	}
+
+	/**
+	 * @brief Tells whether a character is a non-ASCII space; these are the characters that
+	 * CHtmlToText treats as white space (see HtmlToText.cpp).
+	 * @param cp The code point.
+	 * @return true when the character separates words.
+	 */
+	constexpr bool IsUnicodeSpace(char32_t cp) noexcept
+	{
+		return (cp == 0x0085) || (cp == 0x00A0) || (cp == 0x1680) || ((cp >= 0x2000) && (cp <= 0x200B)) ||
+			(cp == 0x2028) || (cp == 0x2029) || (cp == 0x202F) || (cp == 0x205F) || (cp == 0x3000);
+	}
+
+	/**
+	 * @brief Converts a hexadecimal digit.
+	 * @param ch The character.
+	 * @return The value of the digit, or 16 when the character is not a hexadecimal digit.
+	 */
+	constexpr unsigned DigitValue(char ch) noexcept
+	{
+		if ((ch >= '0') && (ch <= '9'))
+			return static_cast<unsigned>(ch - '0');
+		if ((ch >= 'A') && (ch <= 'F'))
+			return static_cast<unsigned>(ch - 'A') + 10;
+		if ((ch >= 'a') && (ch <= 'f'))
+			return static_cast<unsigned>(ch - 'a') + 10;
+		return 16;
+	}
+
+	/**
+	 * @brief Measures the UTF-8 sequence that starts at the given position.
+	 * @param text The text; the position must be inside it.
+	 * @param at The position of the first byte.
+	 * @return The length of the sequence, or 0 when the bytes are not well-formed UTF-8: stray
+	 * continuation byte, overlong form, surrogate, value above U+10FFFF or truncated sequence.
+	 */
+	size_t Utf8Length(std::string_view text, size_t at) noexcept
+	{
+		const auto lead = static_cast<unsigned char>(text[at]);
+		size_t length = 0;
+		unsigned char lower = 0x80;	// range of the second byte, the others are always 0x80..0xBF
+		unsigned char upper = 0xBF;
+		if ((lead >= 0xC2) && (lead <= 0xDF))
+			length = 2;
+		else if ((lead >= 0xE0) && (lead <= 0xEF))
+		{
+			length = 3;
+			if (lead == 0xE0)
+				lower = 0xA0;	// no overlong forms
+			else if (lead == 0xED)
+				upper = 0x9F;	// no surrogates
+		}
+		else if ((lead >= 0xF0) && (lead <= 0xF4))
+		{
+			length = 4;
+			if (lead == 0xF0)
+				lower = 0x90;	// no overlong forms
+			else if (lead == 0xF4)
+				upper = 0x8F;	// nothing above U+10FFFF
+		}
+		else
+			return 0;
+
+		if (text.size() - at < length)
+			return 0;
+
+		const auto second = static_cast<unsigned char>(text[at + 1]);
+		if ((second < lower) || (second > upper))
+			return 0;
+
+		for (size_t index = 2; index < length; ++index)
+		{
+			if ((static_cast<unsigned char>(text[at + index]) & 0xC0) != 0x80)
+				return 0;
+		}
+		return length;
+	}
+
+	/**
+	 * @brief Appends a character, encoded in UTF-8; a space of any kind is appended as an ordinary space.
+	 * @param text The text to append to.
+	 * @param cp The code point, which must be a valid Unicode scalar value.
+	 */
+	void AppendCharacter(std::string& text, char32_t cp)
+	{
+		if (IsUnicodeSpace(cp))
+			text += ' ';
+		else if (cp < 0x80)
+			text += static_cast<char>(cp);
+		else if (cp < 0x800)
+		{
+			text += static_cast<char>(0xC0 | (cp >> 6));
+			text += static_cast<char>(0x80 | (cp & 0x3F));
+		}
+		else if (cp < 0x10000)
+		{
+			text += static_cast<char>(0xE0 | (cp >> 12));
+			text += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+			text += static_cast<char>(0x80 | (cp & 0x3F));
+		}
+		else
+		{
+			text += static_cast<char>(0xF0 | (cp >> 18));
+			text += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+			text += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+			text += static_cast<char>(0x80 | (cp & 0x3F));
+		}
+	}
+
+	/**
+	 * @brief Finds a reference in the table.
+	 * @param name The name, without the semicolon.
+	 * @return The reference, or nullptr when there is no such name.
+	 */
+	const HtmlEntity* FindEntity(std::string_view name) noexcept
+	{
+		const HtmlEntity* const last = std::end(kHtmlEntities);
+		const HtmlEntity* const entity = std::lower_bound(std::begin(kHtmlEntities), last, name,
+			[](const HtmlEntity& entry, std::string_view key) noexcept { return entry.name < key; });
+		return ((entity != last) && (entity->name == name)) ? entity : nullptr;
+	}
+
+	/**
+	 * @brief Turns the number of a numeric reference into the character it stands for.
+	 * @param value The number; any value above kMaxCodePoint stands for all the larger ones.
+	 * @return The character.
+	 */
+	constexpr char32_t ResolveNumeric(char32_t value) noexcept
+	{
+		if ((value == 0) || (value > kMaxCodePoint) || ((value >= 0xD800) && (value <= 0xDFFF)))
+			return kReplacementCharacter;
+		if ((value >= 0x80) && (value <= 0x9F))
+			return kWindows1252[value - 0x80];
+		return value;
+	}
+
+	/**
+	 * @brief Decodes a numeric reference, decimal as in `&#169;` or hexadecimal as in `&#xA9;`.
+	 *
+	 * The semicolon is optional, as it is in the browsers, and the number can have any number of digits.
+	 * @param text The text after the ampersand; it starts with the '#'.
+	 * @param cp Receives the character the reference stands for.
+	 * @return The number of characters of the reference after the ampersand, or 0 when the '#' is not
+	 * followed by a digit and there is no reference.
+	 */
+	size_t ParseNumeric(std::string_view text, char32_t& cp) noexcept
+	{
+		size_t index = 1;
+		unsigned base = 10;
+		if ((index < text.size()) && ((text[index] == 'x') || (text[index] == 'X')))
+		{
+			base = 16;
+			++index;
+		}
+
+		const size_t digits = index;
+		char32_t value = 0;
+		for (; index < text.size(); ++index)
+		{
+			const unsigned digit = DigitValue(text[index]);
+			if (digit >= base)
+				break;
+			if (value <= kMaxCodePoint)	// the value stays out of the range, however many digits follow
+				value = value * base + digit;
+		}
+
+		if (index == digits)
+			return 0;
+
+		if ((index < text.size()) && (text[index] == ';'))
+			++index;
+
+		cp = ResolveNumeric(value);
+		return index;
+	}
+
+	/**
+	 * @brief Finds a named reference, as in `&amp;`, `&copy` or `&hellip;`.
+	 *
+	 * The longest name wins. A name is valid when it is followed by a semicolon, or when it is one of
+	 * the legacy names, which are valid without it too: `&amp;` and `&amp` are the same but `&hellip`
+	 * is not a reference. Whatever follows a legacy name is just text, so `&notit;` is the not sign
+	 * followed by `it;`.
+	 * @param text The text after the ampersand; it starts with an ASCII letter or digit.
+	 * @param consumed Receives the number of characters of the reference after the ampersand.
+	 * @return The reference, or nullptr when there is none.
+	 */
+	const HtmlEntity* ParseNamed(std::string_view text, size_t& consumed) noexcept
+	{
+		size_t length = 0;
+		const size_t limit = (std::min)(text.size(), kNameLengths.longest + 1);
+		while ((length < limit) && IsAsciiAlphanumeric(text[length]))
+			++length;
+
+		if ((length <= kNameLengths.longest) && (length < text.size()) && (text[length] == ';'))
+		{
+			const HtmlEntity* const entity = FindEntity(text.substr(0, length));
+			if (entity != nullptr)
 			{
-				MatchState = MatchBegin;
-				MatchingName.erase();
+				consumed = length + 1;
+				return entity;
 			}
+		}
+
+		for (size_t size = (std::min)(length, kNameLengths.longestLegacy); size >= kNameLengths.shortestLegacy; --size)
+		{
+			const HtmlEntity* const entity = FindEntity(text.substr(0, size));
+			if ((entity != nullptr) && entity->legacy)
+			{
+				consumed = size;
+				return entity;
+			}
+		}
+		return nullptr;
+	}
+
+	/**
+	 * @brief Decodes the reference that follows an ampersand and appends what it stands for.
+	 * @param text The text after the ampersand.
+	 * @param output The decoded text.
+	 * @return The number of characters of the reference after the ampersand, or 0 when there is no
+	 * reference, in which case nothing is appended.
+	 */
+	size_t ExpandReference(std::string_view text, std::string& output)
+	{
+		if (text.empty())
+			return 0;
+
+		if (text[0] == '#')
+		{
+			char32_t cp = 0;
+			const size_t consumed = ParseNumeric(text, cp);
+			if (consumed != 0)
+				AppendCharacter(output, cp);
+			return consumed;
+		}
+
+		if (!IsAsciiAlphanumeric(text[0]))
+			return 0;
+
+		size_t consumed = 0;
+		const HtmlEntity* const entity = ParseNamed(text, consumed);
+		if (entity == nullptr)
+			return 0;
+
+		AppendCharacter(output, entity->first);
+		if (entity->second != 0)
+			AppendCharacter(output, entity->second);
+		return consumed;
+	}
+}
+
+std::string UnquoteHTML(std::string_view html)
+{
+	std::string text;
+	text.reserve(html.size());
+
+	size_t run = 0;	// start of the bytes that are copied as they are
+	size_t pos = 0;
+	while (pos < html.size())
+	{
+		const auto ch = static_cast<unsigned char>(html[pos]);
+		if (ch == '&')
+		{
+			text.append(html.substr(run, pos - run));
+			const size_t consumed = ExpandReference(html.substr(pos + 1), text);
+			if (consumed == 0)
+				text += '&';	// not a reference
+			pos += consumed + 1;
+			run = pos;
+		}
+		else if (ch < 0x80)
+			++pos;
+		else
+		{
+			const size_t length = Utf8Length(html, pos);
+			if (length != 0)
+				pos += length;
 			else
 			{
-				OutBuffer += ThisCh;
-			} /*if*/
-		} /*if*/
-	} /*for*/
-	return OutBuffer;
-} /*UnquoteHTML*/
+				text.append(html.substr(run, pos - run));
+				text.append(kReplacementBytes);
+				run = ++pos;
+			}
+		}
+	}
+	text.append(html.substr(run));
+	return text;
+}

@@ -21,11 +21,13 @@ WebSearchEngine. If not, see <http://www.opensource.org/licenses/gpl-3.0.html>*/
 #include "stdafx.h"
 #include "WebSearchEngineExt.h"
 #include "HtmlToText.h"
+#include "UnquoteHTML.h"
+#include "Utf8.h"
 #include "ODBCWrappers.h"
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
-#include <codecvt>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -55,32 +57,20 @@ static __int64 gCurrentKeywordID = 0; ///< Counter for assigning unique keyword 
 #define DELIMITERS _T("\t\n\r\"\' !?#$%&|(){}[]*/+-:;<>=.,")
 
 /**
- * @brief Removes HTML quotes from a string.
- * @param InBuffer The input string.
- * @return The unquoted string.
+ * @brief Converts UTF-8 text taken from a webpage to a wide string that the database accepts.
+ *
+ * The tables of the database use the character set utf8 of MySQL, which stores the characters of
+ * the Basic Multilingual Plane only. The server refuses a row with a character above U+FFFF, an
+ * emoji for instance, and ProcessHTML stops the crawl when a row is refused, so each of these
+ * characters is replaced by U+FFFD here. The replacement can be removed once the tables use utf8mb4.
+ * @param str The UTF-8 text; the parts that are not well-formed are replaced by U+FFFD.
+ * @return The wide string, without any character above U+FFFF.
  */
-const std::string UnquoteHTML(const std::string& InBuffer);
-
-/**
- * @brief Converts a UTF-8 encoded std::string to std::wstring.
- * @param str The UTF-8 string.
- * @return The corresponding wide string.
- */
-std::wstring utf8_to_wstring(const std::string& str)
+static std::wstring utf8_to_database_text(std::string_view str)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-	return myconv.from_bytes(str);
-}
-
-/**
- * @brief Converts a std::wstring to a UTF-8 encoded std::string.
- * @param str The wide string.
- * @return The corresponding UTF-8 string.
- */
-std::string wstring_to_utf8(const std::wstring& str)
-{
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-	return myconv.to_bytes(str);
+	std::wstring text = utf8_to_wstring(str);
+	replace_supplementary_characters(text);
+	return text;
 }
 
 /**
@@ -294,6 +284,7 @@ static inline std::wstring to_upper(std::wstring s)
  * @param lpszURL The URL of the processed page.
  * @return true if processing succeeded, false otherwise.
  */
+#pragma warning(disable : 6262)
 bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lpszFilename, const std::string& lpszURL)
 {
 	CString strMessage;
@@ -320,7 +311,7 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 			if (std::string::npos != last_char)
 			{
 				// Decode HTML entities, convert to wide string, trim whitespace, and cap length
-				pTitle = trim(utf8_to_wstring(UnquoteHTML(pHtmlContent.substr(found, last_char - found)))).substr(0, 0x100 - 1);
+				pTitle = trim(utf8_to_database_text(UnquoteHTML(pHtmlContent.substr(found, last_char - found)))).substr(0, 0x100 - 1);
 			}
 		}
 		// Pages without a title are considered invalid; skip further processing
@@ -363,12 +354,12 @@ bool ProcessHTML(CWebSearchEngineDlg* pWebSearchEngineDlg, const std::string& lp
 			found = pHtmlContent.find("<a href=\"", found); // search for the next anchor
 		}
 
-		const std::wstring& pURL = utf8_to_wstring(lpszURL);
+		const std::wstring& pURL = utf8_to_database_text(lpszURL);
 		OutputDebugString(CString(pURL.c_str()) + _T("\n"));
 		// OutputDebugString(CString(pTitle.c_str()) + _T("\n"));
 
 		// Convert the raw HTML to plain text and normalize all whitespace to single spaces
-		std::wstring pPlainText = trim(utf8_to_wstring(UnquoteHTML(pHtmlToText.Convert(pHtmlContent))));
+		std::wstring pPlainText = trim(utf8_to_database_text(UnquoteHTML(pHtmlToText.Convert(pHtmlContent))));
 		findAndReplaceAll(pPlainText, _T("\t"), _T(" ")); // tabs -> space
 		findAndReplaceAll(pPlainText, _T("\n"), _T(" ")); // newlines -> space
 		findAndReplaceAll(pPlainText, _T("\r"), _T(" ")); // carriage returns -> space

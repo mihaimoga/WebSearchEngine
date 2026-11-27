@@ -48,6 +48,15 @@
     <ClInclude Include="HLinkCtrl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UnquoteHTML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlEntities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utf8.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WebSearchEngine.cpp">
@@ -77,6 +86,9 @@
     <ClCompile Include="HLinkCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Utf8.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WebSearchEngine.rc">
@@ -101,6 +113,7 @@
     <None Include="AGENTS.md" />
     <None Include="WebSearchEngine.html" />
     <None Include="README.md" />
+    <None Include="GenerateHtmlEntities.py" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WebSearchEngine.ico">
